@@ -58,6 +58,14 @@ func (statics StaticFiles)GetStaticFile(name string) (*StaticFile,error){
 	return nil,fmt.Errorf("not exists")
 }
 
+func (statics StaticFiles)GetContent(name string)string{
+	s,err:=statics.GetStaticFile(name)
+	if(err!=nil){
+		return ""
+	}
+	return s.Content
+}
+
 func getStaticFile(baseDir string,name string)(*StaticFile,error){
 	fullPath:=baseDir+string(filepath.Separator)+name
 	f,err:=os.Open(fullPath)
@@ -172,7 +180,6 @@ func encode(data []byte) string {
 }
 
 func walkerFor(basePath string) filepath.WalkFunc {
-	//	baseName:=filepath.Base(basePath)
 
 	return func(name string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -187,7 +194,6 @@ func walkerFor(basePath string) filepath.WalkFunc {
 			if ferr != nil {
 				return ferr
 			}
-			//			nameSlash:=filepath.ToSlash(filepath.Clean(baseName+string(os.PathSeparator)+nameRel))
 			nameSlash := filepath.ToSlash(nameRel)
 			files = append(files, staticFile{
 				Name:       base64.StdEncoding.EncodeToString([]byte(nameSlash)),

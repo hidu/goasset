@@ -39,6 +39,14 @@ func (statics StaticFiles) GetStaticFile(name string) (*StaticFile, error) {
 	return nil, fmt.Errorf("not exists")
 }
 
+func (statics StaticFiles) GetContent(name string) string {
+	s, err := statics.GetStaticFile(name)
+	if err != nil {
+		return ""
+	}
+	return s.Content
+}
+
 func getStaticFile(baseDir string, name string) (*StaticFile, error) {
 	fullPath := baseDir + string(filepath.Separator) + name
 	f, err := os.Open(fullPath)
@@ -122,8 +130,8 @@ var Files = StaticFiles{
 
 	base64decode("UkVBRE1FLm1k"): &StaticFile{
 		Name:    base64decode("UkVBRE1FLm1k"),
-		Mtime:   1417276377,
-		Content: decode("H4sIAAAJbogA/0rPTywuTi0uUUhJzc3n4oJw9NLzFTKLFdJT81KLEktSUxSSKhVgCrkSuJJTFHITM/MU1NSAogpFpXlgLkhTtG5KalJpeixXAgAAAP//AQAA//+9SujXWAAAAA=="),
+		Mtime:   1417276641,
+		Content: decode("H4sIAAAJbogA/0rPTywuTi0uUUhJzc3n4oJw9NLzFTKLFdJT81KLEktSUxSSKhVgCrkSEhK4klMUchMz8xTU1IDiCkWleWAuSFu0bkpqUml6LEgZAAAA//8BAAD//9D3MKdcAAAA"),
 	},
 
 	base64decode("Yi5jc3M="): &StaticFile{
