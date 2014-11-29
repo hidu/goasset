@@ -3,12 +3,12 @@ goassest
 go assets tool
 
 install
-`bash
+```
 go get -u github.com/hidu/goassest
-`
+```
 
 useage
-`bash
-gostatic tpl
-`
+```
+goassest [go assest dir]
+```
 output file is `assest.go` in assest dir
