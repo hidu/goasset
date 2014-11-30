@@ -134,19 +134,19 @@ func init() {
 	Assest = &AssestStruct{
 		Files: map[string]*AssestFile{
 
-			_assestBase64Decode("cmVzL2IuY3Nz"): &AssestFile{
+			_assestBase64Decode("cmVzL2IuY3Nz"): {
 				Name:    _assestBase64Decode("cmVzL2IuY3Nz"),
 				Mtime:   1417275726,
 				Content: _assestGzipBase64decode("H4sIAAAJbogA/8owrE7LzyvRLc6sSrVSMLEoqLBOzs/JL7JKL0pNzavl4sowroYIFKWm1AIAAAD//wEAAP//9lO6yS4AAAA="),
 			},
 
-			_assestBase64Decode("cmVzL2luZGV4Lmh0bWw="): &AssestFile{
+			_assestBase64Decode("cmVzL2luZGV4Lmh0bWw="): {
 				Name:    _assestBase64Decode("cmVzL2luZGV4Lmh0bWw="),
 				Mtime:   1417309139,
 				Content: _assestGzipBase64decode("H4sIAAAJbogA/5SRu27zMAyF9zwFo93Rn8vwD7KWXtZ2SIdOBWOzkRMlMkSird++9KWA0S7tJOCQ5/Dgk1vePtzsnx/vIMgl+oX7eghrfS4kCFXAzCSledrfF/+NytJIJB8oxgTITCzOjtrCxeZ6hkyxNCxdJA5EYkC6lkoj9CG2YjYQMr2WxmZie1j1ijq5yk0r89UTvuGoGuBcTYYTW1yd1OLsOPyDd2YCtywK2P3bQVH8MqHFI6lhHvItxU7gDqnu/EI5ridM7ynHWsdrHbbe4U8CIJiPPeaXQ8Tr2fhBdhb1WqtZGrbxxzTyhpouSeM2w5EtNHVphkN9t7D1Q6ueElTpKnobGpkajtV0q//pTwAAAP//AQAA//8lBkWbAAIAAA=="),
 			},
 
-			_assestBase64Decode("cmVzL2pzL2EuanM="): &AssestFile{
+			_assestBase64Decode("cmVzL2pzL2EuanM="): {
 				Name:    _assestBase64Decode("cmVzL2pzL2EuanM="),
 				Mtime:   1417341750,
 				Content: _assestGzipBase64decode("H4sIAAAJbogA/+IqTi0JycxNzS8t0UgrzUsuyczP09Cs5uJMyU8uzU3NK9FLTy1xzUkFMZ0qPVM0lDJSc3LylTT1MvPyUos8Qnx9bCFCOol6WcUKRkrWXLU6hgYGBprWAAAAAP//AQAA//9NRg/0XAAAAA=="),

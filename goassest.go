@@ -34,6 +34,9 @@ func (conf *assestConf) String() string {
 }
 
 func loadConf(confName string) (*assestConf, error) {
+	if confName == "" {
+		confName = "assest.json"
+	}
 	data, err := ioutil.ReadFile(confName)
 	if err != nil {
 		return nil, err
@@ -62,7 +65,7 @@ func main() {
 		fmt.Println("\tgoassest", " [assest.json]")
 		fmt.Println("\ntools for golang,merge all assest into go source code")
 		fmt.Println("https://github.com/hidu/goassest/\n")
-		fmt.Println("json conf example:\n",demoConf)
+		fmt.Println("json conf example:\n", demoConf)
 		flag.PrintDefaults()
 	}
 	flag.Parse()
@@ -112,7 +115,7 @@ func makeAssest(conf *assestConf) {
 		fmt.Println(outFilePath, "unchanged")
 		return
 	}
-	err = ioutil.WriteFile(outFilePath, codeBytes, 0655)
+	err = ioutil.WriteFile(outFilePath, codeBytes, 0644)
 	if err == nil {
 		fmt.Println("create ", outFilePath, "success")
 	} else {
@@ -298,37 +301,33 @@ func (f *_assestFileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 
-var Assest *AssestStruct
+func _assestGzipBase64decode(data string)string{
+  b,_:=base64.StdEncoding.DecodeString(data)
+  gr, _:= gzip.NewReader(bytes.NewBuffer(b))
+  bs, _ := ioutil.ReadAll(gr)
+  return string(bs)
+}
 
-func init(){
-	 _assestGzipBase64decode:=func(data string)string{
-	  b,_:=base64.StdEncoding.DecodeString(data)
-	  gr, _:= gzip.NewReader(bytes.NewBuffer(b))
-	  bs, _ := ioutil.ReadAll(gr)
-	  return string(bs)
-	}
-	
-	_assestBase64Decode:=func(data string)string{
-	   b,_:=base64.StdEncoding.DecodeString(data)
-	   return string(b)
-	}
-	
-	Assest=&AssestStruct{
-		Files:map[string]*AssestFile{
-		   {{range $file := .files}}
-		      _assestBase64Decode("{{$file.Name}}"):&AssestFile{
-		         Name:_assestBase64Decode("{{$file.Name}}"),
-		         Mtime:{{$file.Mtime}},
-		         Content:_assestGzipBase64decode("{{$file.Content}}"),
-		       },
-			{{end}}
-		},
-	}
+func _assestBase64Decode(data string)string{
+   b,_:=base64.StdEncoding.DecodeString(data)
+   return string(b)
+}
+
+var Assest *AssestStruct=&AssestStruct{
+	Files:map[string]*AssestFile{
+	   {{range $file := .files}}
+	      _assestBase64Decode("{{$file.Name}}"):&AssestFile{
+	         Name:_assestBase64Decode("{{$file.Name}}"),
+	         Mtime:{{$file.Mtime}},
+	         Content:_assestGzipBase64decode("{{$file.Content}}"),
+	       },
+		{{end}}
+	},
 }
 
 `))
 
-var demoConf=`
+var demoConf = `
 {
   "assestDir":"res",
   "destName":"res/assest.go",
