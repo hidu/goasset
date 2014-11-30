@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/base64"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"go/format"
@@ -14,7 +15,164 @@ import (
 	"text/template"
 )
 
-var outFileName = "assest.go"
+type staticFile struct {
+	Name       string
+	NameOrigin string
+	Mtime      int64
+	Content    string
+}
+
+type assestConf struct {
+	AssestDir   string `json:"assestDir"`
+	DestName    string `json:"destName"`
+	PackageName string `json:"packageName"`
+}
+
+func (conf *assestConf) String() string {
+	data, _ := json.MarshalIndent(conf, "", "    ")
+	return string(data)
+}
+
+func loadConf(confName string) (*assestConf, error) {
+	data, err := ioutil.ReadFile(confName)
+	if err != nil {
+		return nil, err
+	}
+	os.Chdir(filepath.Dir(confName))
+
+	var conf assestConf
+	err = json.Unmarshal(data, &conf)
+	if err != nil {
+		return nil, err
+	}
+	if conf.AssestDir == "" || conf.DestName == "" || conf.PackageName == "" {
+		return nil, fmt.Errorf("conf err,empty value")
+	}
+	if info, err := os.Stat(conf.AssestDir); err != nil {
+		if !info.IsDir() {
+			return nil, fmt.Errorf("assest dir[%s] is not dir", conf.AssestDir)
+		}
+	}
+	return &conf, nil
+}
+
+func main() {
+	flag.Usage = func() {
+		fmt.Println("useage:")
+		fmt.Println("\tgoassest", " [assest.json]")
+		fmt.Println("\ntools for golang,merge all assest into go source code")
+		fmt.Println("https://github.com/hidu/goassest/\n")
+		fmt.Println("json conf example:\n",demoConf)
+		flag.PrintDefaults()
+	}
+	flag.Parse()
+	conf, confErr := loadConf(flag.Arg(0))
+	if confErr != nil {
+		fmt.Println("load json conf failed!")
+		fmt.Println(confErr)
+		flag.Usage()
+		os.Exit(1)
+	}
+	makeAssest(conf)
+}
+
+var files []staticFile
+
+func makeAssest(conf *assestConf) {
+	files = make([]staticFile, 0)
+
+	filepath.Walk(conf.AssestDir, walkerFor(conf))
+
+	var buf bytes.Buffer
+	datas := make(map[string]interface{})
+	datas["files"] = files
+	datas["package"] = conf.PackageName
+	datas["assestDir"] = conf.AssestDir
+
+	tpl.Execute(&buf, datas)
+	codeBytes, err := format.Source(buf.Bytes())
+	if err != nil {
+		fmt.Println("go code err:\n", err, "\ncode is:\n")
+		fmt.Println(buf.String())
+		os.Exit(1)
+	}
+	fmt.Println("assest conf:")
+	fmt.Println(conf.String())
+	fmt.Println("total ", len(files), "assests")
+	fmt.Println(strings.Repeat("-", 80))
+	for _, staticFile := range files {
+		fmt.Println("add", staticFile.NameOrigin)
+	}
+	fmt.Println(strings.Repeat("-", 80))
+
+	outFilePath := conf.DestName
+
+	origin, err := ioutil.ReadFile(outFilePath)
+	if err == nil && bytes.Equal(origin, codeBytes) {
+		fmt.Println(outFilePath, "unchanged")
+		return
+	}
+	err = ioutil.WriteFile(outFilePath, codeBytes, 0655)
+	if err == nil {
+		fmt.Println("create ", outFilePath, "success")
+	} else {
+		fmt.Println("failed", err)
+		os.Exit(2)
+	}
+}
+
+func walkerFor(conf *assestConf) filepath.WalkFunc {
+	baseDir := conf.AssestDir
+	destName, _ := filepath.Abs(conf.DestName)
+	return func(name string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.Mode().IsRegular() {
+			absName, err := filepath.Abs(name)
+			if err != nil || absName == destName {
+				return nil
+			}
+
+			nameRel, _ := filepath.Rel(baseDir, name)
+			if isIgnoreFile(nameRel) {
+				return nil
+			}
+			data, ferr := ioutil.ReadFile(name)
+			if ferr != nil {
+				return ferr
+			}
+			nameSlash := filepath.ToSlash(filepath.Base(baseDir) + "/" + nameRel)
+			files = append(files, staticFile{
+				Name:       base64.StdEncoding.EncodeToString([]byte(nameSlash)),
+				NameOrigin: nameSlash,
+				Content:    encode(data),
+				Mtime:      info.ModTime().Unix(),
+			})
+		}
+
+		return nil
+	}
+}
+
+func encode(data []byte) string {
+	var buf bytes.Buffer
+	gw := gzip.NewWriter(&buf)
+	gw.Write(data)
+	gw.Flush()
+	gw.Close()
+	return base64.StdEncoding.EncodeToString(buf.Bytes())
+}
+
+func isIgnoreFile(name string) bool {
+	subNames := strings.Split(name, "/")
+	for _, n := range subNames {
+		if n[:1] == "." {
+			return true
+		}
+	}
+	return false
+}
 
 var tpl = template.Must(template.New("static").Parse(`
 /**
@@ -35,235 +193,145 @@ import (
 	"mime"
 	"path"
 	"os"
+	"strings"
 )
 
-type StaticFile struct{
+type AssestFile struct{
 	Name string
 	Mtime int64
 	Content string
 }
 
-type StaticFiles map[string]*StaticFile
+type AssestStruct struct{
+  Files  map[string]*AssestFile
+  Direct bool  //for debug
+}
 
-//for debug
-var DebugAssestDir string=""
 
-func (statics StaticFiles)GetStaticFile(name string) (*StaticFile,error){
-	if(DebugAssestDir!=""){
-		return getStaticFile(DebugAssestDir,name)
+func (statics *AssestStruct)GetAssestFile(name string) (*AssestFile,error){
+	name=strings.TrimLeft(path.Clean(name),"/")
+	if statics.Direct {
+		f,err:=os.Open(name)
+		if(err!=nil){
+			return nil,err
+		}
+		defer f.Close()
+		info,err:=f.Stat()
+		if(err!=nil){
+			return nil,err
+		}
+		if(info.Mode().IsRegular()){
+			content,err:=ioutil.ReadAll(f)
+			if(err!=nil){
+				return nil,err
+			}
+			return &AssestFile{
+				Content:string(content),
+				Name:name,
+				Mtime:info.ModTime().Unix(),
+			},nil
+		}
+		return nil,fmt.Errorf("not file")
 	}
-	if sf,has:=statics[path.Clean(name)];has{
+	if sf,has:=statics.Files[name];has{
 		return sf,nil
 	}
 	return nil,fmt.Errorf("not exists")
 }
 
-func (statics StaticFiles)GetContent(name string)string{
-	s,err:=statics.GetStaticFile(name)
+func (statics AssestStruct)GetContent(name string)string{
+	s,err:=statics.GetAssestFile(name)
 	if(err!=nil){
 		return ""
 	}
 	return s.Content
 }
 
-func getStaticFile(baseDir string,name string)(*StaticFile,error){
-	fullPath:=baseDir+string(filepath.Separator)+name
-	f,err:=os.Open(fullPath)
-	if(err!=nil){
-		return nil,err
-	}
-	defer f.Close()
-	info,err:=f.Stat()
-	if(err!=nil){
-		return nil,err
-	}
-	if(info.Mode().IsRegular()){
-		content,err:=ioutil.ReadAll(f)
+func (statics *AssestStruct)FileHandlerFunc(name string) http.HandlerFunc{
+	static, err := statics.GetAssestFile(name)
+	return func(w http.ResponseWriter,r *http.Request){
 		if(err!=nil){
-			return nil,err
+			http.NotFound(w, r)
+			return
 		}
-		return &StaticFile{
-			Content:string(content),
-			Name:name,
-			Mtime:info.ModTime().Unix(),
-		},nil
+		modtime := time.Unix(static.Mtime, 0)
+		modifiedSince := r.Header.Get("If-Modified-Since")
+		if modifiedSince != "" {
+			t, err := time.Parse(http.TimeFormat, modifiedSince)
+			if err == nil && modtime.Before(t.Add(1*time.Second)) {
+				w.Header().Del("Content-Type")
+				w.Header().Del("Content-Length")
+				w.Header().Set("Last-Modified", modtime.UTC().Format(http.TimeFormat))
+				w.WriteHeader(http.StatusNotModified)
+				return
+			}
+		}
+	
+		mimeType := mime.TypeByExtension(filepath.Ext(static.Name))
+		if mimeType != "" {
+			w.Header().Set("Content-Type", mimeType)
+		}
+		w.Header().Set("Last-Modified", modtime.UTC().Format(http.TimeFormat))
+		w.Write([]byte(static.Content))
 	}
-	return nil,fmt.Errorf("not file")
 }
 
 /**
-*res.DebugAssestDir="../";//for debug read it direct
-*http.Handle("/res/",res.Files.HttpHandler("/res/"))
+*Assest.Direct=true //for debug read it direct
+*http.Handle("/res/",res.Assest.HttpHandler("/res/"))
 */
-func (statics *StaticFiles)HttpHandler(pdir string)http.Handler{
-	return &fileServer{sf:statics,pdir:pdir}
+func (statics *AssestStruct)HttpHandler(pdir string)http.Handler{
+	return &_assestFileServer{sf:statics,pdir:pdir}
 }
 
 
-func decode(data string)string{
-  b,_:=base64.StdEncoding.DecodeString(data)
-  gr, _:= gzip.NewReader(bytes.NewBuffer(b))
-  bs, _ := ioutil.ReadAll(gr)
-  return string(bs)
-}
 
-func base64decode(data string)string{
-   b,_:=base64.StdEncoding.DecodeString(data)
-   return string(b)
-}
-
-type fileServer struct{
-	sf *StaticFiles
+type _assestFileServer struct{
+	sf *AssestStruct
 	pdir string
 }
 
 
-func (f *fileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (f *_assestFileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	rname,_:=filepath.Rel(f.pdir,r.URL.Path)
-	static,err:=f.sf.GetStaticFile(rname)
-	if(err!=nil){
-		http.NotFound(w,r)
-		return
-	}
-	modtime:=time.Unix(static.Mtime,0)
-	modifiedSince:=r.Header.Get("If-Modified-Since")
-	if modifiedSince!=""{
-		t, err := time.Parse(http.TimeFormat, modifiedSince)
-		if err == nil && modtime.Before(t.Add(1*time.Second)) {
-			h := w.Header()
-			delete(h, "Content-Type")
-			delete(h, "Content-Length")
-			w.Header().Set("Last-Modified", modtime.UTC().Format(http.TimeFormat))
-			w.WriteHeader(http.StatusNotModified)
-			return
-		}
-	}
-	
-	mimeType := mime.TypeByExtension(filepath.Ext(static.Name))
-	if mimeType != "" {
-		w.Header().Set("Content-Type", mimeType)
-	}
-	w.Header().Set("Last-Modified", modtime.UTC().Format(http.TimeFormat))
-	w.Write([]byte(static.Content))
+	f.sf.FileHandlerFunc(rname).ServeHTTP(w,r)
 }
 
 
-var Files=StaticFiles{
-   {{range $file := .files}}
-      base64decode("{{$file.Name}}"):&StaticFile{
-         Name:base64decode("{{$file.Name}}"),
-         Mtime:{{$file.Mtime}},
-         Content:decode("{{$file.Content}}"),
-       },
-	{{end}}
+var Assest *AssestStruct
+
+func init(){
+	 _assestGzipBase64decode:=func(data string)string{
+	  b,_:=base64.StdEncoding.DecodeString(data)
+	  gr, _:= gzip.NewReader(bytes.NewBuffer(b))
+	  bs, _ := ioutil.ReadAll(gr)
+	  return string(bs)
+	}
+	
+	_assestBase64Decode:=func(data string)string{
+	   b,_:=base64.StdEncoding.DecodeString(data)
+	   return string(b)
+	}
+	
+	Assest=&AssestStruct{
+		Files:map[string]*AssestFile{
+		   {{range $file := .files}}
+		      _assestBase64Decode("{{$file.Name}}"):&AssestFile{
+		         Name:_assestBase64Decode("{{$file.Name}}"),
+		         Mtime:{{$file.Mtime}},
+		         Content:_assestGzipBase64decode("{{$file.Content}}"),
+		       },
+			{{end}}
+		},
+	}
 }
 
 `))
 
-type staticFile struct {
-	Name       string
-	NameOrigin string
-	Mtime      int64
-	Content    string
-	Md5        string
+var demoConf=`
+{
+  "assestDir":"res",
+  "destName":"res/assest.go",
+  "packageName":"res"
 }
-
-var files []staticFile
-
-func encode(data []byte) string {
-	var buf bytes.Buffer
-	gw := gzip.NewWriter(&buf)
-	gw.Write(data)
-	gw.Flush()
-	gw.Close()
-	return base64.StdEncoding.EncodeToString(buf.Bytes())
-}
-
-func walkerFor(basePath string) filepath.WalkFunc {
-
-	return func(name string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.Mode().IsRegular() {
-			nameRel, _ := filepath.Rel(basePath, name)
-			if isIgnoreFile(nameRel) {
-				return nil
-			}
-			data, ferr := ioutil.ReadFile(name)
-			if ferr != nil {
-				return ferr
-			}
-			nameSlash := filepath.ToSlash(nameRel)
-			files = append(files, staticFile{
-				Name:       base64.StdEncoding.EncodeToString([]byte(nameSlash)),
-				NameOrigin: nameSlash,
-				Content:    encode(data),
-				Mtime:      info.ModTime().Unix(),
-			})
-		}
-
-		return nil
-	}
-}
-func isIgnoreFile(name string) bool {
-	if name == outFileName {
-		return true
-	}
-	subNames := strings.Split(name, "/")
-	for _, n := range subNames {
-		if n[:1] == "." {
-			return true
-		}
-	}
-	return false
-}
-
-func main() {
-	flag.Usage = func() {
-		fmt.Println("useage:")
-		fmt.Println("\tgoassest", " [static dir path]")
-		fmt.Println("\ntools for golang,merge all assest into go source code")
-		fmt.Println("https://github.com/hidu/goassest/\n")
-		flag.PrintDefaults()
-	}
-	flag.Parse()
-	dirOrigin := flag.Arg(0)
-	if dirOrigin == "" {
-		flag.Usage()
-		os.Exit(1)
-	}
-	dir, err := filepath.Abs(dirOrigin)
-	if err != nil {
-		fmt.Println("wrong dir")
-		return
-	}
-
-	filepath.Walk(dir, walkerFor(dir))
-	var buf bytes.Buffer
-	datas := make(map[string]interface{})
-	datas["files"] = files
-	datas["package"] = filepath.Base(dir)
-
-	tpl.Execute(&buf, datas)
-	codeBytes, err := format.Source(buf.Bytes())
-	if err != nil {
-		fmt.Println("go code err", err)
-		os.Exit(1)
-	}
-
-	outFilePath := dir + string(os.PathSeparator) + outFileName
-	err = ioutil.WriteFile(outFilePath, codeBytes, 0655)
-	if err == nil {
-		fmt.Println("total ", len(files), "files")
-		fmt.Println(strings.Repeat("-", 80))
-		for _, staticFile := range files {
-			fmt.Println("add", staticFile.NameOrigin)
-		}
-		fmt.Println(strings.Repeat("-", 80))
-		fmt.Println("create ", filepath.Clean(dirOrigin+string(os.PathSeparator)+outFileName), "success")
-	} else {
-		fmt.Println("failed", err)
-		os.Exit(2)
-	}
-}
+`
