@@ -210,11 +210,12 @@ type AssestStruct struct{
   Direct bool  //for debug
 }
 
+var _assestCwd,_=os.Getwd()
 
 func (statics *AssestStruct)GetAssestFile(name string) (*AssestFile,error){
 	name=strings.TrimLeft(path.Clean(name),"/")
 	if statics.Direct {
-		f,err:=os.Open(name)
+		f,err:=os.Open(_assestCwd+"/"+name)
 		if(err!=nil){
 			return nil,err
 		}
