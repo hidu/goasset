@@ -72,7 +72,7 @@ func main() {
 	conf, confErr := loadConf(flag.Arg(0))
 	if confErr != nil {
 		fmt.Println("load json conf failed!")
-		fmt.Println(confErr)
+		fmt.Println(confErr,"\n")
 		flag.Usage()
 		os.Exit(1)
 	}
