@@ -23,9 +23,9 @@ type staticFile struct {
 }
 
 type assestConf struct {
-	AssestDir   string `json:"assestDir"`
-	DestName    string `json:"destName"`
-	PackageName string `json:"packageName"`
+	AssestDir   string `json:"src"`
+	DestName    string `json:"dest"`
+	PackageName string `json:"package"`
 }
 
 func (conf *assestConf) String() string {
@@ -33,49 +33,84 @@ func (conf *assestConf) String() string {
 	return string(data)
 }
 
-func loadConf(confName string) (*assestConf, error) {
-	if confName == "" {
-		confName = "assest.json"
-	}
-	data, err := ioutil.ReadFile(confName)
-	if err != nil {
-		return nil, err
-	}
-	os.Chdir(filepath.Dir(confName))
+var src = flag.String("src", "", "assest src dir,eg : res/")
+var dest = flag.String("dest", "", "dest file path,eg : res/assest.go ")
+var packageName = flag.String("package", "", "package name,eg : res")
 
+func parseConf() (*assestConf, error) {
+	confFilePath := flag.Arg(0)
+	if confFilePath == "" {
+		confFilePath = "assest.json"
+	}
+	_, err := os.Stat(confFilePath)
 	var conf assestConf
-	err = json.Unmarshal(data, &conf)
-	if err != nil {
-		return nil, err
+	if err == nil {
+		data, err := ioutil.ReadFile(confFilePath)
+		if err != nil {
+			return nil, err
+		}
+		os.Chdir(filepath.Dir(confFilePath))
+		err = json.Unmarshal(data, &conf)
+		if err != nil {
+			return nil, err
+		}
 	}
-	if conf.AssestDir == "" || conf.DestName == "" || conf.PackageName == "" {
-		return nil, fmt.Errorf("conf err,empty value")
+	if *src != "" {
+		conf.AssestDir = *src
 	}
+
+	if *dest != "" {
+		conf.DestName = *dest
+	}
+	if *packageName != "" {
+		conf.PackageName = *packageName
+	}
+	if conf.AssestDir == "" {
+		return nil, fmt.Errorf("assest src dir is empty")
+	}
+
+	if conf.DestName == "" {
+		return nil, fmt.Errorf("assest dest is empty")
+	}
+
 	if info, err := os.Stat(conf.AssestDir); err != nil {
 		if !info.IsDir() {
 			return nil, fmt.Errorf("assest dir[%s] is not dir", conf.AssestDir)
 		}
+		conf.AssestDir, _ = filepath.Abs(conf.AssestDir)
 	}
+
+	destInfo, err := os.Stat(conf.DestName)
+
+	if err == nil && destInfo.IsDir() {
+		conf.DestName = conf.DestName + "/assest.go"
+	}
+
+	if conf.PackageName == "" {
+		conf.PackageName = filepath.Base(conf.AssestDir)
+	}
+
 	return &conf, nil
 }
 
 func main() {
 	flag.Usage = func() {
 		fmt.Println("useage:")
-		fmt.Println("\tgoassest", " [assest.json]")
+		fmt.Println("  goassest", " [assest.json]")
+		fmt.Println("  goassest", " -src=res -dest=dem -package=res")
+		flag.PrintDefaults()
 		fmt.Println("\ntools for golang,merge all assest into go source code")
 		fmt.Println("https://github.com/hidu/goassest/\n")
 		fmt.Println("json conf example:\n", demoConf)
-		flag.PrintDefaults()
 	}
 	flag.Parse()
-	conf, confErr := loadConf(flag.Arg(0))
+	conf, confErr := parseConf()
 	if confErr != nil {
-		fmt.Println("load json conf failed!")
-		fmt.Println(confErr,"\n")
+		fmt.Println("parse conf failed:", confErr, "\n")
 		flag.Usage()
 		os.Exit(1)
 	}
+
 	makeAssest(conf)
 }
 
@@ -188,15 +223,16 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/base64"
-	"io/ioutil"
-	"net/http"
-	"path/filepath"
+	"flag"
 	"fmt"
-	"time"
+	"io/ioutil"
 	"mime"
-	"path"
+	"net/http"
 	"os"
+	"path"
+	"path/filepath"
 	"strings"
+	"time"
 )
 
 type AssestFile struct{
@@ -207,14 +243,19 @@ type AssestFile struct{
 
 type AssestStruct struct{
   Files  map[string]*AssestFile
-  Direct bool  //for debug
+}
+
+var _assest_direct bool
+
+func init(){
+	flag.BoolVar(&_assest_direct,"assest_direct", false, "for debug,read assest direct")
 }
 
 var _assestCwd,_=os.Getwd()
 
 func (statics *AssestStruct)GetAssestFile(name string) (*AssestFile,error){
 	name=strings.TrimLeft(path.Clean(name),"/")
-	if statics.Direct {
+	if _assest_direct {
 		f,err:=os.Open(_assestCwd+"/"+name)
 		if(err!=nil){
 			return nil,err
@@ -250,6 +291,15 @@ func (statics AssestStruct)GetContent(name string)string{
 	}
 	return s.Content
 }
+
+func (statics AssestStruct)GetFileNames(dir string)[]string{
+	names:=make([]string,len(statics.Files))
+	for name,_:=range statics.Files{
+		names=append(names,name)
+	}
+	return names
+}
+
 
 func (statics *AssestStruct)FileHandlerFunc(name string) http.HandlerFunc{
 	static, err := statics.GetAssestFile(name)
@@ -330,8 +380,8 @@ var Assest *AssestStruct=&AssestStruct{
 
 var demoConf = `
 {
-  "assestDir":"res",
-  "destName":"res/assest.go",
-  "packageName":"res"
+  "src":"res",
+  "dest":"res/assest.go",
+  "package":"res"
 }
 `
