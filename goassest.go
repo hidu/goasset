@@ -303,6 +303,9 @@ func (statics AssestStruct)GetFileNames(dir string)[]string{
 
 
 func (statics *AssestStruct)FileHandlerFunc(name string) http.HandlerFunc{
+	if(strings.Contains(name,"private")){
+		return http.NotFound
+	}
 	static, err := statics.GetAssestFile(name)
 	return func(w http.ResponseWriter,r *http.Request){
 		if(err!=nil){

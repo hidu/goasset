@@ -6,5 +6,5 @@ goassest
 ```
 then run it: 
 ```
-cd main && go run main.go [-debug]
+cd main && go run main.go [-assest_direct=true]
 ```
