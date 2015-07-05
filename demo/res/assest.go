@@ -33,7 +33,10 @@ type AssestStruct struct {
 var _assest_direct bool
 
 func init() {
-	flag.BoolVar(&_assest_direct, "assest_direct", false, "for debug,read assest direct")
+	exeName := filepath.Base(os.Getenv("_"))
+	if exeName == "go" || exeName == "go.exe" {
+		flag.BoolVar(&_assest_direct, "assest_direct", false, "for debug,read assest direct")
+	}
 }
 
 var _assestCwd, _ = os.Getwd()

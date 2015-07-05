@@ -14,7 +14,7 @@ import (
 	"strings"
 	"text/template"
 )
-const VERSION="0.1"
+const VERSION="0.2 20150705"
 
 type staticFile struct {
 	Name       string
@@ -249,7 +249,11 @@ type AssestStruct struct{
 var _assest_direct bool
 
 func init(){
-	flag.BoolVar(&_assest_direct,"assest_direct", false, "for debug,read assest direct")
+	exeName:=filepath.Base(os.Getenv("_"))
+	//only enable with go run
+	if(exeName=="go" || exeName=="go.exe"){
+		flag.BoolVar(&_assest_direct, "assest_direct", false, "for debug,read assest direct")
+	}
 }
 
 var _assestCwd,_=os.Getwd()
