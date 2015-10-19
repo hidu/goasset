@@ -13,7 +13,7 @@ func main() {
 	flag.Parse()
 
 	http.HandleFunc("/index.html", res.Assest.FileHandlerFunc("res/index.html"))
-	http.Handle("/res/", res.Assest.HttpHandler("/"))
+	http.Handle("/res/", res.Assest.HTTPHandler("/"))
 	addr := fmt.Sprintf("127.0.0.1:%d", *port)
 
 	content := res.Assest.GetContent("res/b.css")

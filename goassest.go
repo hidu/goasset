@@ -16,7 +16,7 @@ import (
 )
 
 // VERSION current version
-const VERSION = "0.3 20150830"
+const VERSION = "0.3.1 20151019"
 
 type staticFile struct {
 	Name       string
@@ -86,7 +86,7 @@ func parseConf() (*assestConf, error) {
 	destInfo, err := os.Stat(conf.DestName)
 
 	if err == nil && destInfo.IsDir() {
-		conf.DestName = conf.DestName + "/assest.go"
+		conf.DestName = conf.DestName + string(filepath.Separator) + "assest.go"
 	}
 
 	if conf.PackageName == "" {
@@ -183,7 +183,8 @@ func walkerFor(conf *assestConf) filepath.WalkFunc {
 			if ferr != nil {
 				return ferr
 			}
-			nameSlash := filepath.ToSlash(filepath.Base(baseDir) + "/" + nameRel)
+			nameSlash := filepath.ToSlash(filepath.Base(baseDir) + string(filepath.Separator) + nameRel)
+			nameSlash = strings.Replace(nameSlash, string(filepath.Separator), "/", -1)
 			files = append(files, staticFile{
 				Name:       base64.StdEncoding.EncodeToString([]byte(nameSlash)),
 				NameOrigin: nameSlash,
@@ -265,7 +266,7 @@ var _assestCwd,_=os.Getwd()
 func (statics *AssestStruct)GetAssestFile(name string) (*AssestFile,error){
 	name=strings.TrimLeft(path.Clean(name),"/")
 	if _assestDirect {
-		f,err:=os.Open(_assestCwd+"/"+name)
+		f,err:=os.Open(_assestCwd+string(filepath.Separator)+name)
 		if(err!=nil){
 			return nil,err
 		}
@@ -361,6 +362,9 @@ type _assestFileServer struct{
 // ServeHTTP ServeHTTP
 func (f *_assestFileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	rname,_:=filepath.Rel(f.pdir,r.URL.Path)
+	if(filepath.Separator!='/'){
+		rname=strings.Replace(rname,string(filepath.Separator),"/",-1)
+	}
 	f.sf.FileHandlerFunc(rname).ServeHTTP(w,r)
 }
 
