@@ -13,10 +13,13 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"github.com/tdewolff/minify"
+	"github.com/tdewolff/minify/js"
+	"github.com/tdewolff/minify/css"
 )
 
 // VERSION current version
-const VERSION = "0.3.1 20151019"
+const VERSION = "0.4 20160225"
 
 type staticFile struct {
 	Name       string
@@ -96,15 +99,20 @@ func parseConf() (*assestConf, error) {
 	return &conf, nil
 }
 
+var m *minify.M
+
 func main() {
 	flag.Usage = func() {
 		fmt.Println("useage:")
-		fmt.Println("  goassest", " [-src=res] [-dest=demo] [-package=res] [assest.json]")
+		fmt.Println("  goassest", " [-src=res] [-dest=demo] [-package=res] [-min=css,js] [assest.json]")
 		flag.PrintDefaults()
 		fmt.Println("\ngolang assest tool,version:", VERSION)
 		fmt.Println("https://github.com/hidu/goassest/\n")
 		fmt.Println("json conf example:\n", demoConf)
 	}
+	m=minify.New()
+	m.AddFunc(".js",js.Minify)
+	m.AddFunc(".css",css.Minify)
 	flag.Parse()
 	conf, confErr := parseConf()
 	if confErr != nil {
@@ -162,6 +170,22 @@ func makeAssest(conf *assestConf) {
 	}
 }
 
+func data_minify(name string,data []byte) []byte{
+	ext:=filepath.Ext(name)
+	if(ext=="" || (ext!=".js" && ext!=".css") || strings.HasSuffix(name,".min"+ext)){
+		return data
+	}
+	if(bytes.Contains(data,[]byte("no_minify"))){
+		return data
+	}
+	d,err:=m.Bytes(ext,data)
+	if(err!=nil){
+		fmt.Println("minify ",name,"failed",err)
+		return data
+	}
+	return d
+}
+
 func walkerFor(conf *assestConf) filepath.WalkFunc {
 	baseDir := conf.AssestDir
 	destName, _ := filepath.Abs(conf.DestName)
@@ -183,6 +207,7 @@ func walkerFor(conf *assestConf) filepath.WalkFunc {
 			if ferr != nil {
 				return ferr
 			}
+			data=data_minify(name,data)
 			nameSlash := filepath.ToSlash(filepath.Base(baseDir) + string(filepath.Separator) + nameRel)
 			nameSlash = strings.Replace(nameSlash, string(filepath.Separator), "/", -1)
 			files = append(files, staticFile{
