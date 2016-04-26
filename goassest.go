@@ -7,15 +7,15 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/tdewolff/minify"
+	"github.com/tdewolff/minify/css"
+	"github.com/tdewolff/minify/js"
 	"go/format"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
-	"github.com/tdewolff/minify"
-	"github.com/tdewolff/minify/js"
-	"github.com/tdewolff/minify/css"
 )
 
 // VERSION current version
@@ -104,15 +104,15 @@ var m *minify.M
 func main() {
 	flag.Usage = func() {
 		fmt.Println("useage:")
-		fmt.Println("  goassest", " [-src=res] [-dest=demo] [-package=res] [-min=css,js] [assest.json]")
+		fmt.Println("  goassest", " [-src=res] [-dest=demo] [-package=res]  [assest.json]")
 		flag.PrintDefaults()
 		fmt.Println("\ngolang assest tool,version:", VERSION)
 		fmt.Println("https://github.com/hidu/goassest/\n")
 		fmt.Println("json conf example:\n", demoConf)
 	}
-	m=minify.New()
-	m.AddFunc(".js",js.Minify)
-	m.AddFunc(".css",css.Minify)
+	m = minify.New()
+	m.AddFunc(".js", js.Minify)
+	m.AddFunc(".css", css.Minify)
 	flag.Parse()
 	conf, confErr := parseConf()
 	if confErr != nil {
@@ -170,19 +170,21 @@ func makeAssest(conf *assestConf) {
 	}
 }
 
-func data_minify(name string,data []byte) []byte{
-	ext:=filepath.Ext(name)
-	if(ext=="" || (ext!=".js" && ext!=".css") || strings.HasSuffix(name,".min"+ext)){
+func data_minify(name string, data []byte) []byte {
+	ext := filepath.Ext(name)
+	if len(data) < 1 || ext == "" || (ext != ".js" && ext != ".css") || strings.HasSuffix(name, ".min"+ext) {
 		return data
 	}
-	if(bytes.Contains(data,[]byte("no_minify"))){
+	if bytes.Contains(data, []byte("no_minify")) {
 		return data
 	}
-	d,err:=m.Bytes(ext,data)
-	if(err!=nil){
-		fmt.Println("minify ",name,"failed",err)
+	d, err := m.Bytes(ext, data)
+	if err != nil {
+		fmt.Println("minify ", name, "failed", err)
 		return data
 	}
+
+	fmt.Println("minify:", name, len(data), "->", len(d), fmt.Sprintf("%.2f", float64(len(d))/float64(len(data))*100.0))
 	return d
 }
 
@@ -207,7 +209,7 @@ func walkerFor(conf *assestConf) filepath.WalkFunc {
 			if ferr != nil {
 				return ferr
 			}
-			data=data_minify(name,data)
+			data = data_minify(name, data)
 			nameSlash := filepath.ToSlash(filepath.Base(baseDir) + string(filepath.Separator) + nameRel)
 			nameSlash = strings.Replace(nameSlash, string(filepath.Separator), "/", -1)
 			files = append(files, staticFile{
