@@ -20,7 +20,13 @@ func main() {
 	fmt.Println("b.css content:", content)
 
 	names := res.Assest.GetFileNames("/")
-	fmt.Println(names)
+	fmt.Println("fileNames of /", names)
+
+	names_0 := res.Assest.GetFileNames("")
+	fmt.Println("fileNames of ", names_0)
+
+	names_1 := res.Assest.GetFileNames("/res/js/")
+	fmt.Println("fileNames of /res/js/", names_1)
 
 	fmt.Println("pls visit http://" + addr + "/index.html")
 

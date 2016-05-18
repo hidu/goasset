@@ -19,7 +19,7 @@ import (
 )
 
 // VERSION current version
-const VERSION = "0.4 20160225"
+const VERSION = "0.5 20160518"
 
 type staticFile struct {
 	Name       string
@@ -210,7 +210,7 @@ func walkerFor(conf *assestConf) filepath.WalkFunc {
 				return ferr
 			}
 			data = data_minify(name, data)
-			nameSlash := filepath.ToSlash(filepath.Base(baseDir) + string(filepath.Separator) + nameRel)
+			nameSlash := string(filepath.Separator) + filepath.ToSlash(filepath.Base(baseDir)+string(filepath.Separator)+nameRel)
 			nameSlash = strings.Replace(nameSlash, string(filepath.Separator), "/", -1)
 			files = append(files, staticFile{
 				Name:       base64.StdEncoding.EncodeToString([]byte(nameSlash)),
@@ -291,7 +291,10 @@ var _assestCwd,_=os.Getwd()
 
 // GetAssestFile get file by name
 func (statics *AssestStruct)GetAssestFile(name string) (*AssestFile,error){
-	name=strings.TrimLeft(path.Clean(name),"/")
+	if(name!="" && name[0]!='/'){
+		name="/"+name
+	}
+	name = path.Clean(name)
 	if _assestDirect {
 		f,err:=os.Open(_assestCwd+string(filepath.Separator)+name)
 		if(err!=nil){
@@ -332,9 +335,23 @@ func (statics AssestStruct)GetContent(name string)string{
 
 // GetFileNames get all file names
 func (statics AssestStruct)GetFileNames(dir string)[]string{
+	if(dir==""){
+		dir="/"
+	}
 	names:=make([]string,len(statics.Files))
+		dirRaw:=dir
+	dir = path.Clean(dir) 
+	
+	if(dir!="/" && strings.HasSuffix(dirRaw,"/")){
+		dir+=string(filepath.Separator)
+	}
+	 
+	dir=filepath.ToSlash(dir)
+	
 	for name:=range statics.Files{
-		names=append(names,name)
+		if(strings.HasPrefix(name,dir)){
+			names=append(names,name)
+		}
 	}
 	return names
 }
