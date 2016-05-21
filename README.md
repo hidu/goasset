@@ -24,13 +24,17 @@ assest conf is: `assest.json`:
 
 
 ```
-	http.HandleFunc("/index.html", res.Assest.FileHandlerFunc("res/index.html"))
-	http.Handle("/res/", res.Assest.HttpHandler("/"))
-	
-	content:=res.Assest.GetContent("res/b.css")
-	fmt.Println("b.css content:",content)
-
-	names := res.Assest.GetFileNames("/")
+    http.HandleFunc("/index.html", res.Assest.FileHandlerFunc("res/index.html"))
+    http.Handle("/res/", res.Assest.HttpHandler("/"))
+    
+    http.Handle("/js/",res.Assest.HTTPHandler("/res/"))
+    
+    http.Handle("/static/",http.StripPrefix("/static/",res.Assest.HTTPHandler("/res/")))
+    
+    content:=res.Assest.GetContent("res/b.css")
+    fmt.Println("b.css content:",content)
+    
+    names := res.Assest.GetFileNames("/")
 ```
 
 

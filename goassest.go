@@ -19,7 +19,7 @@ import (
 )
 
 // VERSION current version
-const VERSION = "0.5 20160518"
+const VERSION = "0.5.1 20160521"
 
 type staticFile struct {
 	Name       string
@@ -390,9 +390,13 @@ func (statics *AssestStruct)FileHandlerFunc(name string) http.HandlerFunc{
 }
 
 // HTTPHandler handler http request
-// eg: http.Handle("/res/",res.Assest.HttpHandler("/res/"))
-func (statics *AssestStruct)HTTPHandler(pdir string)http.Handler{
-	return &_assestFileServer{sf:statics,pdir:pdir}
+//eg:on file system is :/res/js/a.js and request is /res/js/a.js
+//http.Handle("/res/",res.Assest.HttpHandler("/"))
+
+//eg:on file system is :/res/js/a.js and request is /js/a.js
+//http.Handle("/js/",res.Assest.HttpHandler("/res/")) 
+func (statics *AssestStruct)HTTPHandler(baseDir string)http.Handler{
+	return &_assestFileServer{sf:statics,pdir:baseDir}
 }
 
 
@@ -405,10 +409,7 @@ type _assestFileServer struct{
 
 // ServeHTTP ServeHTTP
 func (f *_assestFileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	rname,_:=filepath.Rel(f.pdir,r.URL.Path)
-	if(filepath.Separator!='/'){
-		rname=strings.Replace(rname,string(filepath.Separator),"/",-1)
-	}
+	rname:=filepath.Join(f.pdir,r.URL.Path)
 	f.sf.FileHandlerFunc(rname).ServeHTTP(w,r)
 }
 
