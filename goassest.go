@@ -19,7 +19,7 @@ import (
 )
 
 // VERSION current version
-const VERSION = "0.5.1 20160521"
+const VERSION = "0.5.2 20160602"
 
 type staticFile struct {
 	Name       string
@@ -32,6 +32,8 @@ type assestConf struct {
 	AssestDir   string `json:"src"`
 	DestName    string `json:"dest"`
 	PackageName string `json:"package"`
+//	Minify []string `json:"minify"`
+	assestDirs []string
 }
 
 func (conf *assestConf) String() string {
@@ -42,6 +44,7 @@ func (conf *assestConf) String() string {
 var src = flag.String("src", "", "assest src dir,eg : res/")
 var dest = flag.String("dest", "", "dest file path,eg : res/assest.go ")
 var packageName = flag.String("package", "", "package name,eg : res")
+//var minifyFlag = flag.String("minify", "", "file need minify")
 
 func parseConf() (*assestConf, error) {
 	confFilePath := flag.Arg(0)
@@ -78,12 +81,15 @@ func parseConf() (*assestConf, error) {
 	if conf.DestName == "" {
 		return nil, fmt.Errorf("assest dest is empty")
 	}
-
-	if info, err := os.Stat(conf.AssestDir); err != nil {
-		if !info.IsDir() {
-			return nil, fmt.Errorf("assest dir[%s] is not dir", conf.AssestDir)
+	
+	conf.assestDirs=strings.Split(conf.AssestDir,"|")
+	for i,dir:=range conf.assestDirs{
+		if info, err := os.Stat(dir); err != nil {
+			if !info.IsDir() {
+				return nil, fmt.Errorf("assest dir[%s] is not dir", dir)
+			}
+			conf.assestDirs[i], _ = filepath.Abs(dir)
 		}
-		conf.AssestDir, _ = filepath.Abs(conf.AssestDir)
 	}
 
 	destInfo, err := os.Stat(conf.DestName)
@@ -121,22 +127,24 @@ func main() {
 		os.Exit(1)
 	}
 
-	makeAssest(conf)
+	conf.makeAssest()
 }
 
 var files []staticFile
 
-func makeAssest(conf *assestConf) {
+func  (conf *assestConf)makeAssest(){
 	files = make([]staticFile, 0)
-
-	filepath.Walk(conf.AssestDir, walkerFor(conf))
+	
+	for _,dir:=range conf.assestDirs{
+		filepath.Walk(dir, conf.walkerFor(dir))
+	}
 
 	var buf bytes.Buffer
 	datas := make(map[string]interface{})
 	datas["version"] = VERSION
 	datas["files"] = files
 	datas["package"] = conf.PackageName
-	datas["assestDir"] = conf.AssestDir
+//	datas["assestDir"] = conf.AssestDir
 
 	tpl.Execute(&buf, datas)
 	codeBytes, err := format.Source(buf.Bytes())
@@ -170,7 +178,7 @@ func makeAssest(conf *assestConf) {
 	}
 }
 
-func data_minify(name string, data []byte) []byte {
+func (conf *assestConf)dataMinify(name string, data []byte) []byte {
 	ext := filepath.Ext(name)
 	if len(data) < 1 || ext == "" || (ext != ".js" && ext != ".css") || strings.HasSuffix(name, ".min"+ext) {
 		return data
@@ -184,12 +192,11 @@ func data_minify(name string, data []byte) []byte {
 		return data
 	}
 
-	fmt.Println("minify:", name, len(data), "->", len(d), fmt.Sprintf("%.2f", float64(len(d))/float64(len(data))*100.0))
+	fmt.Println("minify:", name, len(data), "->", len(d), fmt.Sprintf("  %.2f%%", float64(len(d))/float64(len(data))*100.0))
 	return d
 }
 
-func walkerFor(conf *assestConf) filepath.WalkFunc {
-	baseDir := conf.AssestDir
+func (conf *assestConf)walkerFor(baseDir string) filepath.WalkFunc {
 	destName, _ := filepath.Abs(conf.DestName)
 	return func(name string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -209,7 +216,7 @@ func walkerFor(conf *assestConf) filepath.WalkFunc {
 			if ferr != nil {
 				return ferr
 			}
-			data = data_minify(name, data)
+			data = conf.dataMinify(name, data)
 			nameSlash := string(filepath.Separator) + filepath.ToSlash(filepath.Base(baseDir)+string(filepath.Separator)+nameRel)
 			nameSlash = strings.Replace(nameSlash, string(filepath.Separator), "/", -1)
 			files = append(files, staticFile{
