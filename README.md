@@ -22,6 +22,16 @@ assest conf is: `assest.json`:
 }
 ```
 
+or
+
+```
+{
+  "src":"res|res2",
+  "dest":"serve/assest.go",
+  "package":"serve"
+}
+```
+
 
 ```
     http.HandleFunc("/index.html", res.Assest.FileHandlerFunc("res/index.html"))

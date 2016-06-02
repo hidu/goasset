@@ -16,6 +16,7 @@ func main() {
 	http.Handle("/res/", res.Assest.HTTPHandler("/"))
 	http.Handle("/js/",res.Assest.HTTPHandler("/res/"))
 	
+	http.Handle("/js2/",http.StripPrefix("/js2/",res.Assest.HTTPHandler("/res2/")))
 	
 	http.Handle("/static/",http.StripPrefix("/static/",res.Assest.HTTPHandler("/res/")))
 	

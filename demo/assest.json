@@ -1,5 +1,5 @@
 {
-  "src":"res",
+  "src":"res|res2",
   "dest":"res/assest.go",
   "package":"res"
 }
