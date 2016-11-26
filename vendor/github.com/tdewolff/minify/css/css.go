@@ -330,11 +330,7 @@ func (c *cssMinifier) minifyFunction(values []css.Token) (int, error) {
 		fun := css.ToHash(values[0].Data[:len(values[0].Data)-1])
 		nArgs := (n - 1) / 2
 		if (fun == css.Rgba || fun == css.Hsla) && nArgs == 4 {
-			d, err := strconv.ParseFloat(string(values[7].Data), 32)
-			if err != nil {
-				// can never fail because if simple == true than this is a NumberToken or PercentageToken
-				return 0, err
-			}
+			d, _ := strconv.ParseFloat(string(values[7].Data), 32) // can never fail because if simple == true than this is a NumberToken or PercentageToken
 			if d-1.0 > -minify.Epsilon {
 				if fun == css.Rgba {
 					values[0].Data = []byte("rgb(")
@@ -450,17 +446,15 @@ func (c *cssMinifier) shortenToken(prop css.Hash, tt css.TokenType, data []byte)
 			n = parse.Number(data)
 		}
 		dim := data[n:]
+		parse.ToLower(dim)
 		data = minify.Number(data[:n], c.o.Decimals)
-		if len(data) != 1 || data[0] != '0' {
-			if tt == css.PercentageToken {
-				data = append(data, '%')
-			} else if tt == css.DimensionToken {
-				parse.ToLower(dim)
-				data = append(data, dim...)
-			}
+		if tt == css.PercentageToken && (len(data) != 1 || data[0] != '0' || prop == css.Color) {
+			data = append(data, '%')
+		} else if tt == css.DimensionToken && (len(data) != 1 || data[0] != '0' || requiredDimension[string(dim)]) {
+			data = append(data, dim...)
 		}
 	} else if tt == css.IdentToken {
-		parse.ToLower(data)
+		//parse.ToLower(data) // TODO: not all identifiers are case-insensitive; all <custom-ident> properties are case-sensitive
 		if hex, ok := ShortenColorName[css.ToHash(data)]; ok {
 			tt = css.HashToken
 			data = hex

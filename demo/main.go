@@ -14,13 +14,13 @@ func main() {
 
 	http.HandleFunc("/index.html", res.Assest.FileHandlerFunc("res/index.html"))
 	http.Handle("/res/", res.Assest.HTTPHandler("/"))
-	http.Handle("/js/",res.Assest.HTTPHandler("/res/"))
-	
-	http.Handle("/js2/",http.StripPrefix("/js2/",res.Assest.HTTPHandler("/res2/")))
-	
-	http.Handle("/static/",http.StripPrefix("/static/",res.Assest.HTTPHandler("/res/")))
-	
-	addr := fmt.Sprintf("127.0.0.1:%d", *port)
+	http.Handle("/js/", res.Assest.HTTPHandler("/res/"))
+
+	http.Handle("/js2/", http.StripPrefix("/js2/", res.Assest.HTTPHandler("/res2/")))
+
+	http.Handle("/static/", http.StripPrefix("/static/", res.Assest.HTTPHandler("/res/")))
+
+	addr := fmt.Sprintf(":%d", *port)
 
 	content := res.Assest.GetContent("res/b.css")
 	fmt.Println("b.css content:", content)
@@ -30,7 +30,7 @@ func main() {
 
 	names_0 := res.Assest.GetFileNames("")
 	fmt.Println("fileNames of ", names_0)
-	
+
 	names_1 := res.Assest.GetFileNames("/res/js/")
 	fmt.Println("fileNames of /res/js/", names_1)
 

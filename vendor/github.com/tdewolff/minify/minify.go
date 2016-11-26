@@ -18,9 +18,11 @@ var ErrNotExist = errors.New("minifier does not exist for mimetype")
 
 ////////////////////////////////////////////////////////////////
 
-type minifierFunc func(*M, io.Writer, io.Reader, map[string]string) error
+// MinifierFunc is a function that implements Minifer.
+type MinifierFunc func(*M, io.Writer, io.Reader, map[string]string) error
 
-func (f minifierFunc) Minify(m *M, w io.Writer, r io.Reader, params map[string]string) error {
+// Minify calls f(m, w, r, params)
+func (f MinifierFunc) Minify(m *M, w io.Writer, r io.Reader, params map[string]string) error {
 	return f(m, w, r, params)
 }
 
@@ -74,7 +76,7 @@ func (m *M) Add(mimetype string, minifier Minifier) {
 }
 
 // AddFunc adds a minify function to the mimetype => function map (unsafe for concurrent use).
-func (m *M) AddFunc(mimetype string, minifier minifierFunc) {
+func (m *M) AddFunc(mimetype string, minifier MinifierFunc) {
 	m.literal[mimetype] = minifier
 }
 
@@ -84,7 +86,7 @@ func (m *M) AddRegexp(pattern *regexp.Regexp, minifier Minifier) {
 }
 
 // AddFuncRegexp adds a minify function to the mimetype => function map (unsafe for concurrent use).
-func (m *M) AddFuncRegexp(pattern *regexp.Regexp, minifier minifierFunc) {
+func (m *M) AddFuncRegexp(pattern *regexp.Regexp, minifier MinifierFunc) {
 	m.pattern = append(m.pattern, patternMinifier{pattern, minifier})
 }
 
@@ -98,6 +100,23 @@ func (m *M) AddCmd(mimetype string, cmd *exec.Cmd) {
 // It allows the use of external tools like ClosureCompiler, UglifyCSS, etc. for a specific mimetype regular expression.
 func (m *M) AddCmdRegexp(pattern *regexp.Regexp, cmd *exec.Cmd) {
 	m.pattern = append(m.pattern, patternMinifier{pattern, &cmdMinifier{cmd}})
+}
+
+// Match returns the pattern and minifier that gets matched with the mediatype.
+// It returns nil when no matching minifier exists.
+// It has the same matching algorithm as Minify.
+func (m *M) Match(mediatype string) (string, map[string]string, MinifierFunc) {
+	mimetype, params := parse.Mediatype([]byte(mediatype))
+	if minifier, ok := m.literal[string(mimetype)]; ok { // string conversion is optimized away
+		return string(mimetype), params, minifier.Minify
+	} else {
+		for _, minifier := range m.pattern {
+			if minifier.pattern.Match(mimetype) {
+				return minifier.pattern.String(), params, minifier.Minify
+			}
+		}
+	}
+	return string(mimetype), params, nil
 }
 
 // Minify minifies the content of a Reader and writes it to a Writer (safe for concurrent use).
@@ -161,7 +180,7 @@ func (m *M) Reader(mediatype string, r io.Reader) io.Reader {
 }
 
 // minifyWriter makes sure that errors from the minifier are passed down through Close.
-// It also makes sure that all data has been written on calling Close, it flushes.
+// It also makes sure that all data has been written on calling Close (can be blocking).
 type minifyWriter struct {
 	pw  *io.PipeWriter
 	wg  sync.WaitGroup

@@ -1,45 +1,46 @@
 {
 	"ImportPath": "github.com/hidu/goassest",
-	"GoVersion": "go1.6",
+	"GoVersion": "go1.7",
+	"GodepVersion": "v74",
 	"Deps": [
 		{
 			"ImportPath": "github.com/tdewolff/buffer",
-			"Comment": "v1.0.0-3-g8315841",
-			"Rev": "831584167cf35cda11a96d7a0d34c304b2e9b34f"
+			"Comment": "v1.0.0-6-g0edfcb7",
+			"Rev": "0edfcb7b750146ff879e95831de2ef53605a5cb5"
 		},
 		{
 			"ImportPath": "github.com/tdewolff/minify",
-			"Comment": "v2.0.0-66-g2fcf0af",
-			"Rev": "2fcf0af9a7a6e05b8636fc164be109a5b079f3f1"
+			"Comment": "v2.0.0-160-g16330f9",
+			"Rev": "16330f93dda4d8ff8d629459b678d65dc44f91bc"
 		},
 		{
 			"ImportPath": "github.com/tdewolff/minify/css",
-			"Comment": "v2.0.0-66-g2fcf0af",
-			"Rev": "2fcf0af9a7a6e05b8636fc164be109a5b079f3f1"
+			"Comment": "v2.0.0-160-g16330f9",
+			"Rev": "16330f93dda4d8ff8d629459b678d65dc44f91bc"
 		},
 		{
 			"ImportPath": "github.com/tdewolff/minify/js",
-			"Comment": "v2.0.0-66-g2fcf0af",
-			"Rev": "2fcf0af9a7a6e05b8636fc164be109a5b079f3f1"
+			"Comment": "v2.0.0-160-g16330f9",
+			"Rev": "16330f93dda4d8ff8d629459b678d65dc44f91bc"
 		},
 		{
 			"ImportPath": "github.com/tdewolff/parse",
-			"Comment": "v2.0.0",
-			"Rev": "d049a1b90109db2ff7169f4adc0c8641d2eb9c03"
+			"Comment": "v2.0.0-8-gb28f804",
+			"Rev": "b28f804999db32c71234d3dd2c58b7deb85891f6"
 		},
 		{
 			"ImportPath": "github.com/tdewolff/parse/css",
-			"Comment": "v2.0.0",
-			"Rev": "d049a1b90109db2ff7169f4adc0c8641d2eb9c03"
+			"Comment": "v2.0.0-8-gb28f804",
+			"Rev": "b28f804999db32c71234d3dd2c58b7deb85891f6"
 		},
 		{
 			"ImportPath": "github.com/tdewolff/parse/js",
-			"Comment": "v2.0.0",
-			"Rev": "d049a1b90109db2ff7169f4adc0c8641d2eb9c03"
+			"Comment": "v2.0.0-8-gb28f804",
+			"Rev": "b28f804999db32c71234d3dd2c58b7deb85891f6"
 		},
 		{
 			"ImportPath": "github.com/tdewolff/strconv",
-			"Rev": "250be43d61a99c272b18d8c3c63eaf119e18a7c0"
+			"Rev": "3e8091f4417ebaaa3910da63a45ea394ebbfb0e3"
 		}
 	]
 }

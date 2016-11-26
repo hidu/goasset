@@ -19,7 +19,7 @@ import (
 )
 
 // VERSION current version
-const VERSION = "0.5.2 20160602"
+const VERSION = "0.5.3 20161126"
 
 type staticFile struct {
 	Name       string
@@ -32,7 +32,7 @@ type assestConf struct {
 	AssestDir   string `json:"src"`
 	DestName    string `json:"dest"`
 	PackageName string `json:"package"`
-//	Minify []string `json:"minify"`
+	//	Minify []string `json:"minify"`
 	assestDirs []string
 }
 
@@ -44,6 +44,7 @@ func (conf *assestConf) String() string {
 var src = flag.String("src", "", "assest src dir,eg : res/")
 var dest = flag.String("dest", "", "dest file path,eg : res/assest.go ")
 var packageName = flag.String("package", "", "package name,eg : res")
+
 //var minifyFlag = flag.String("minify", "", "file need minify")
 
 func parseConf() (*assestConf, error) {
@@ -81,9 +82,9 @@ func parseConf() (*assestConf, error) {
 	if conf.DestName == "" {
 		return nil, fmt.Errorf("assest dest is empty")
 	}
-	
-	conf.assestDirs=strings.Split(conf.AssestDir,"|")
-	for i,dir:=range conf.assestDirs{
+
+	conf.assestDirs = strings.Split(conf.AssestDir, "|")
+	for i, dir := range conf.assestDirs {
 		if info, err := os.Stat(dir); err != nil {
 			if !info.IsDir() {
 				return nil, fmt.Errorf("assest dir[%s] is not dir", dir)
@@ -132,10 +133,10 @@ func main() {
 
 var files []staticFile
 
-func  (conf *assestConf)makeAssest(){
+func (conf *assestConf) makeAssest() {
 	files = make([]staticFile, 0)
-	
-	for _,dir:=range conf.assestDirs{
+
+	for _, dir := range conf.assestDirs {
 		filepath.Walk(dir, conf.walkerFor(dir))
 	}
 
@@ -144,7 +145,7 @@ func  (conf *assestConf)makeAssest(){
 	datas["version"] = VERSION
 	datas["files"] = files
 	datas["package"] = conf.PackageName
-//	datas["assestDir"] = conf.AssestDir
+	//	datas["assestDir"] = conf.AssestDir
 
 	tpl.Execute(&buf, datas)
 	codeBytes, err := format.Source(buf.Bytes())
@@ -178,7 +179,7 @@ func  (conf *assestConf)makeAssest(){
 	}
 }
 
-func (conf *assestConf)dataMinify(name string, data []byte) []byte {
+func (conf *assestConf) dataMinify(name string, data []byte) []byte {
 	ext := filepath.Ext(name)
 	if len(data) < 1 || ext == "" || (ext != ".js" && ext != ".css") || strings.HasSuffix(name, ".min"+ext) {
 		return data
@@ -196,7 +197,7 @@ func (conf *assestConf)dataMinify(name string, data []byte) []byte {
 	return d
 }
 
-func (conf *assestConf)walkerFor(baseDir string) filepath.WalkFunc {
+func (conf *assestConf) walkerFor(baseDir string) filepath.WalkFunc {
 	destName, _ := filepath.Abs(conf.DestName)
 	return func(name string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -270,6 +271,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"runtime"
 )
 
 // AssestFile assest file  struct
@@ -289,7 +291,7 @@ var _assestDirect bool
 func init(){
 	exeName:=filepath.Base(os.Getenv("_"))
 	//only enable with go run
-	if(exeName=="go" || exeName=="go.exe"){
+	if(exeName=="go" || (runtime.GOOS=="windows" && strings.Contains(os.Args[0], "go-build") ) ){
 		flag.BoolVar(&_assestDirect, "assest_direct", false, "for debug,read assest direct")
 	}
 }
@@ -298,12 +300,12 @@ var _assestCwd,_=os.Getwd()
 
 // GetAssestFile get file by name
 func (statics *AssestStruct)GetAssestFile(name string) (*AssestFile,error){
+	name=filepath.ToSlash(name)
 	if(name!="" && name[0]!='/'){
 		name="/"+name
 	}
-	name = path.Clean(name)
 	if _assestDirect {
-		f,err:=os.Open(_assestCwd+string(filepath.Separator)+name)
+		f,err:=os.Open(filepath.Join(_assestCwd,name))
 		if(err!=nil){
 			return nil,err
 		}
@@ -368,6 +370,7 @@ func (statics *AssestStruct)FileHandlerFunc(name string) http.HandlerFunc{
 	if(strings.Contains(name,"private")){
 		return http.NotFound
 	}
+	name=filepath.ToSlash(name)
 	static, err := statics.GetAssestFile(name)
 	return func(w http.ResponseWriter,r *http.Request){
 		if(err!=nil){
@@ -416,7 +419,7 @@ type _assestFileServer struct{
 
 // ServeHTTP ServeHTTP
 func (f *_assestFileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	rname:=filepath.Join(f.pdir,r.URL.Path)
+	rname:=filepath.ToSlash(filepath.Join(f.pdir,r.URL.Path))
 	f.sf.FileHandlerFunc(rname).ServeHTTP(w,r)
 }
 
