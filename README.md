@@ -1,23 +1,23 @@
-goassest
+goasset
 ========
 go assets tool
 
 install
 ```
-go get -u github.com/hidu/goassest
+go get -u github.com/hidu/goasset
 ```
 
 useage
 ```
- goassest  [-src=res] [-dest=demo] [-package=res] [assest.json]
+ goasset  [-src=res] [-dest=demo] [-package=res] [asset.json]
 ```
-output file is `assest.go` in assest dir  
+output file is `assest.go` in asset dir  
 
-assest conf is: `assest.json`:
+goasset conf is: `assest.json`:
 ```
 {
   "src":"res",
-  "dest":"serve/assest.go",
+  "dest":"serve/asset.go",
   "package":"serve"
 }
 ```
@@ -27,21 +27,21 @@ or
 ```
 {
   "src":"res|res2",
-  "dest":"serve/assest.go",
+  "dest":"serve/asset.go",
   "package":"serve"
 }
 ```
 
 
 ```
-    http.HandleFunc("/index.html", res.Assest.FileHandlerFunc("res/index.html"))
-    http.Handle("/res/", res.Assest.HttpHandler("/"))
+    http.HandleFunc("/index.html", res.Asset.FileHandlerFunc("res/index.html"))
+    http.Handle("/res/", res.Asset.HttpHandler("/"))
     
-    http.Handle("/js/",res.Assest.HTTPHandler("/res/"))
+    http.Handle("/js/",res.Asset.HTTPHandler("/res/"))
     
-    http.Handle("/static/",http.StripPrefix("/static/",res.Assest.HTTPHandler("/res/")))
+    http.Handle("/static/",http.StripPrefix("/static/",res.Asset.HTTPHandler("/res/")))
     
-    content:=res.Assest.GetContent("res/b.css")
+    content:=res.Asset.GetContent("res/b.css")
     fmt.Println("b.css content:",content)
     
     names := res.Assest.GetFileNames("/")

@@ -1,0 +1,5 @@
+{
+  "src":"res|res2",
+  "dest":"res/asset.go",
+  "package":"res"
+}
