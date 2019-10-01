@@ -1,10 +1,14 @@
-goassest demo
+goasset demo
 
-generate assest.go:
+generate asset.go:
 ```
-goassest
+#goasset
+```
+or
+```
+#go generate
 ```
 then run it: 
 ```
-cd main && go run main.go [-assest_direct=true]
+go run main.go [-asset_direct=true]
 ```
