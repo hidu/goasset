@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"go/format"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,7 +19,7 @@ import (
 )
 
 // VERSION current version
-const VERSION = "0.5.3 20161126"
+const VERSION = "0.6 20191001"
 
 type staticFile struct {
 	Name       string
@@ -27,40 +28,44 @@ type staticFile struct {
 	Content    string
 }
 
-var src = flag.String("src", "", "asset src dir,eg : res/")
-var dest = flag.String("dest", "", "dest file path,eg : res/asset.go ")
-var packageName = flag.String("package", "", "package name,eg : res")
-
-//var minifyFlag = flag.String("minify", "", "file need minify")
-
 var m *minify.M
 
 func main() {
 	flag.Usage = func() {
-		fmt.Println("usage:")
-		fmt.Println("  goasset", " [-src=res] [-dest=demo] [-package=res]  [asset.json]")
+		fmt.Fprintln(os.Stderr, "golang asset tool, version:", VERSION)
+		fmt.Fprintln(os.Stderr, "https://github.com/hidu/goasset/")
+		fmt.Fprintln(os.Stderr, "----------------------------------------------------------------------------------------")
+		fmt.Fprintln(os.Stderr, "usage:")
+		fmt.Fprintln(os.Stderr, "  goasset", " [-src=resource] [-dest=resource/asset.go] [-package=resource]  [asset.json]")
 		flag.PrintDefaults()
-		fmt.Println("\ngolang asset tool,version:", VERSION)
-		fmt.Println("https://github.com/hidu/goasset/\n")
-		fmt.Println("json conf example:\n", demoConf)
+		fmt.Fprintln(os.Stderr)
+		fmt.Fprintln(os.Stderr, "config file (asset.json) example:")
+		fmt.Fprintf(os.Stderr, demoConf)
 	}
+
+	flag.Parse()
+
 	m = minify.New()
 	m.AddFunc(".js", js.Minify)
 	m.AddFunc(".css", css.Minify)
-	flag.Parse()
+
 	conf, confErr := parseConf()
 	if confErr != nil {
-		fmt.Println("parse conf failed:", confErr, "\n")
-		flag.Usage()
-		os.Exit(1)
+		log.Fatalln("parse config failed:", confErr)
 	}
 
-	conf.packAsset()
+	err := conf.packAsset()
+	if err != nil {
+		log.Fatalln("pack asset with error: ", err)
+	}
+	log.Println("pack asset success")
 }
 
 var files []staticFile
 
-func (conf *config) packAsset() {
+func (conf *config) packAsset() error {
+	log.Println("asset config:", conf)
+
 	files = make([]staticFile, 0)
 
 	for _, dir := range conf.assetDirs {
@@ -76,33 +81,25 @@ func (conf *config) packAsset() {
 	tpl.Execute(&buf, datas)
 	codeBytes, err := format.Source(buf.Bytes())
 	if err != nil {
-		fmt.Println("go code err:\n", err, "\ncode is:\n")
-		fmt.Println(buf.String())
-		os.Exit(1)
+		return err
 	}
-	fmt.Println("asset conf:")
-	fmt.Println(conf.String())
-	fmt.Println("total ", len(files), "assets")
-	fmt.Println(strings.Repeat("-", 80))
+
+	//log.Println(strings.Repeat("-", 80))
 	for _, staticFile := range files {
-		fmt.Println("add", staticFile.NameOrigin)
+		log.Println("add", staticFile.NameOrigin)
 	}
-	fmt.Println(strings.Repeat("-", 80))
+	//log.Println(strings.Repeat("-", 80))
+	log.Println("total ", len(files), "assets")
 
 	outFilePath := conf.DestName
 
 	origin, err := ioutil.ReadFile(outFilePath)
 	if err == nil && bytes.Equal(origin, codeBytes) {
-		fmt.Println(outFilePath, "unchanged")
-		return
+		log.Println(outFilePath, "unchanged")
+		return nil
 	}
 	err = ioutil.WriteFile(outFilePath, codeBytes, 0644)
-	if err == nil {
-		fmt.Println("create ", outFilePath, "success")
-	} else {
-		fmt.Println("failed", err)
-		os.Exit(2)
-	}
+	return err
 }
 
 func (conf *config) dataMinify(name string, data []byte) []byte {
@@ -115,11 +112,11 @@ func (conf *config) dataMinify(name string, data []byte) []byte {
 	}
 	d, err := m.Bytes(ext, data)
 	if err != nil {
-		fmt.Println("minify ", name, "failed", err)
+		log.Println("minify ", name, "failed, ignore it, err:", err)
 		return data
 	}
 
-	fmt.Println("minify:", name, len(data), "->", len(d), fmt.Sprintf("  %.2f%%", float64(len(d))/float64(len(data))*100.0))
+	log.Println("minify:", name, "(", len(data), "->", len(d), ")", fmt.Sprintf("  %.2f%%", float64(len(d))/float64(len(data))*100.0))
 	return d
 }
 

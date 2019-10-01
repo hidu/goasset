@@ -1,3 +1,5 @@
+//go:generate goasset
+
 package main
 
 import (
@@ -21,10 +23,10 @@ func main() {
 
 	http.Handle("/static/", http.StripPrefix("/static/", res.Asset.HTTPHandler("/res/")))
 
-	addr := fmt.Sprintf(":%d", *port)
+	addr := fmt.Sprintf("127.0.0.1:%d", *port)
 
 	content := res.Asset.GetContent("res/b.css")
-	fmt.Println("b.css content:", content)
+	fmt.Println("b.css content:", string(content))
 
 	names := res.Asset.GetFileNames("/")
 	fmt.Println("fileNames of /", names)

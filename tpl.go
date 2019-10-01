@@ -25,130 +25,177 @@ import (
 	"runtime"
 	"strings"
 	"time"
+    "log"
 )
 
-// AssetFile asset file  struct
-type AssetFile struct{
-	Name string
-	Mtime int64
-	Content []byte
+
+// AssetFile one asset file
+type AssetFile interface {
+	Name() string
+	ModTime() time.Time
+	Content() []byte
+	ContentGzip() []byte
 }
 
-// AssetFile asset files
-type AssetStruct struct{
-  Files  map[string]*AssetFile
+// assetFile asset file  struct
+type assetFile struct {
+	name        string
+	mtime       time.Time
+	content     []byte
+	contentGzip []byte
+}
+
+func (af *assetFile) Name() string {
+	return af.name
+}
+func (af *assetFile) ModTime() time.Time {
+	return af.mtime
+}
+
+func (af *assetFile) Content() []byte {
+	return af.content
+}
+func (af *assetFile) ContentGzip() []byte {
+	return af.contentGzip
+}
+
+var _ AssetFile = &assetFile{}
+
+// AssetFiles asset files
+type AssetFiles interface {
+	GetAssetFile(name string) (AssetFile, error)
+	GetContent(name string) []byte
+	GetFileNames(dir string) []string
+
+	FileHandlerFunc(name string) http.HandlerFunc
+	HTTPHandler(baseDir string) http.Handler
+}
+
+// assetFiles asset files
+type assetFiles struct {
+	Files map[string]*assetFile
 }
 
 var _assetDirect bool
 
-func init(){
-	exeName:=filepath.Base(os.Getenv("_"))
+func init() {
+	exeName := filepath.Base(os.Getenv("_"))
 	// only enable with go run
-	if(exeName=="go" || (runtime.GOOS=="windows" && strings.Contains(os.Args[0], "go-build") ) ){
+	if exeName == "go" || (runtime.GOOS == "windows" && strings.Contains(os.Args[0], "go-build")) {
 		flag.BoolVar(&_assetDirect, "asset_direct", false, "for debug,read asset direct")
 	}
 }
 
-var _assetCwd,_=os.Getwd()
+var _assetCwd, _ = os.Getwd()
 
 // GetAssetFile get file by name
-func (statics *AssetStruct)GetAssetFile(name string) (*AssetFile,error){
-	name=filepath.ToSlash(name)
-	if name!="" && name[0]!='/' {
-		name="/"+name
+func (afs *assetFiles) GetAssetFile(name string) (AssetFile, error) {
+	name = filepath.ToSlash(name)
+	if name != "" && name[0] != '/' {
+		name = "/" + name
 	}
 	if _assetDirect {
-		f,err:=os.Open(filepath.Join(_assetCwd,name))
-		if err!=nil{
-			return nil,err
+		assetFilePath:=filepath.Join(_assetCwd, name)
+		f, err := os.Open(assetFilePath)
+		log.Println("Asset Direct,name=",name,"assetPath=",assetFilePath,"err=",err)
+
+		if err != nil {
+			return nil, err
 		}
 		defer f.Close()
-		info,err:=f.Stat()
-		if err!=nil{
-			return nil,err
+		info, err := f.Stat()
+		if err != nil {
+			return nil, err
 		}
-		if info.Mode().IsRegular(){
-			content,err:=ioutil.ReadAll(f)
-			if err!=nil {
-				return nil,err
+		if info.Mode().IsRegular() {
+			content, err := ioutil.ReadAll(f)
+			if err != nil {
+				return nil, err
 			}
-			return &AssetFile{
-				Content:content,
-				Name:name,
-				Mtime:info.ModTime().Unix(),
-			},nil
+			return &assetFile{
+				content: content,
+				name:    name,
+				mtime:   info.ModTime(),
+			}, nil
 		}
-		return nil,fmt.Errorf("not file")
+		return nil, fmt.Errorf("not file")
 	}
-	if sf,has:=statics.Files[name];has{
-		return sf,nil
+	if sf, has := afs.Files[name]; has {
+		return sf, nil
 	}
-	return nil,fmt.Errorf("not exists")
+	return nil, fmt.Errorf("not exists")
 }
 
 // GetContent get content by name
-func (statics *AssetStruct)GetContent(name string)[]byte{
-	s,err:=statics.GetAssetFile(name)
-	if err!=nil{
+func (afs *assetFiles) GetContent(name string) []byte {
+	s, err := afs.GetAssetFile(name)
+	if err != nil {
 		return []byte("")
 	}
-	return s.Content
+	return s.Content()
 }
 
 // GetFileNames get all file names
-func (statics *AssetStruct)GetFileNames(dir string)[]string{
-	if dir=="" {
-		dir="/"
+func (afs *assetFiles) GetFileNames(dir string) []string {
+	if dir == "" {
+		dir = "/"
 	}
-	names:=make([]string,len(statics.Files))
-		dirRaw:=dir
-	dir = path.Clean(dir) 
-	
-	if dir!="/" && strings.HasSuffix(dirRaw,"/") {
-		dir+=string(filepath.Separator)
+	names := make([]string, 0, len(afs.Files))
+	dirRaw := dir
+	dir = path.Clean(dir)
+
+	if dir != "/" && strings.HasSuffix(dirRaw, "/") {
+		dir += string(filepath.Separator)
 	}
-	 
-	dir=filepath.ToSlash(dir)
-	
-	for name:=range statics.Files{
-		if strings.HasPrefix(name,dir){
-			names=append(names,name)
+
+	dir = filepath.ToSlash(dir)
+
+	for name := range afs.Files {
+		if strings.HasPrefix(name, dir) {
+			names = append(names, name)
 		}
 	}
 	return names
 }
 
 // FileHandlerFunc handler http files
-func (statics *AssetStruct)FileHandlerFunc(name string) http.HandlerFunc{
-	if strings.Contains(name,"private"){
+func (afs *assetFiles) FileHandlerFunc(name string) http.HandlerFunc {
+	if strings.Contains(name, "private") {
 		return http.NotFound
 	}
-	name=filepath.ToSlash(name)
-	static, err := statics.GetAssetFile(name)
-	return func(w http.ResponseWriter,r *http.Request){
-		if err!=nil{
-			http.NotFound(w, r)
+	name = filepath.ToSlash(name)
+	file, err := afs.GetAssetFile(name)
+	return func(writer http.ResponseWriter, req *http.Request) {
+		if err != nil {
+			http.NotFound(writer, req)
 			return
 		}
-		mtime := time.Unix(static.Mtime, 0)
-		modifiedSince := r.Header.Get("If-Modified-Since")
+		modifiedSince := req.Header.Get("If-Modified-Since")
 		if modifiedSince != "" {
 			t, err := time.Parse(http.TimeFormat, modifiedSince)
-			if err == nil && mtime.Before(t.Add(1*time.Second)) {
-				w.Header().Del("Content-Type")
-				w.Header().Del("Content-Length")
-				w.Header().Set("Last-Modified", mtime.UTC().Format(http.TimeFormat))
-				w.WriteHeader(http.StatusNotModified)
+			if err == nil && file.ModTime().Before(t) {
+				writer.Header().Del("Content-Type")
+				writer.Header().Del("Content-Length")
+				writer.Header().Set("Last-Modified", file.ModTime().UTC().Format(http.TimeFormat))
+				writer.WriteHeader(http.StatusNotModified)
 				return
 			}
 		}
-	
-		mimeType := mime.TypeByExtension(filepath.Ext(static.Name))
+
+		mimeType := mime.TypeByExtension(filepath.Ext(file.Name()))
 		if mimeType != "" {
-			w.Header().Set("Content-Type", mimeType)
+			writer.Header().Set("Content-Type", mimeType)
 		}
-		w.Header().Set("Last-Modified", mtime.UTC().Format(http.TimeFormat))
-		w.Write(static.Content)
+		writer.Header().Set("Last-Modified", file.ModTime().UTC().Format(http.TimeFormat))
+
+        gzipContent:=file.ContentGzip()
+
+		if len(gzipContent)>0 && strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") {
+			writer.Header().Set("Content-Encoding", "gzip")
+			writer.Write(gzipContent)
+		} else {
+			writer.Write(file.Content())
+		}
 	}
 }
 
@@ -157,49 +204,64 @@ func (statics *AssetStruct)FileHandlerFunc(name string) http.HandlerFunc{
 // http.Handle("/res/",res.Asset.HttpHandler("/"))
 
 // eg:on file system is :/res/js/a.js and request is /js/a.js
-// http.Handle("/js/",res.Asset.HttpHandler("/res/")) 
-func (statics *AssetStruct)HTTPHandler(baseDir string)http.Handler{
-	return &_assetFileServer{sf:statics,pdir:baseDir}
+// http.Handle("/js/",res.Asset.HttpHandler("/res/"))
+func (afs *assetFiles) HTTPHandler(baseDir string) http.Handler {
+	return &_assetFileServer{sf: afs, pdir: baseDir}
 }
 
-
-
-type _assetFileServer struct{
-	sf *AssetStruct
+type _assetFileServer struct {
+	sf   *assetFiles
 	pdir string
 }
 
-
 // ServeHTTP ServeHTTP
 func (f *_assetFileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	name:=filepath.ToSlash(filepath.Join(f.pdir,r.URL.Path))
-	f.sf.FileHandlerFunc(name).ServeHTTP(w,r)
+	name := filepath.ToSlash(filepath.Join(f.pdir, r.URL.Path))
+	f.sf.FileHandlerFunc(name).ServeHTTP(w, r)
 }
 
-
-func _assetGzipBase64decode(data string)[]byte{
-  b,_:=base64.StdEncoding.DecodeString(data)
-  gr, _:= gzip.NewReader(bytes.NewBuffer(b))
-  bs, _ := ioutil.ReadAll(gr)
-  return bs
+func _assetGzipBase64decode(data string) []byte {
+	bf := _assetBase64Decode(data)
+	gzipReader, errGzip := gzip.NewReader(bytes.NewBuffer(bf))
+	if errGzip != nil {
+		panic("data in wrong format, gzip decode failed:" + errGzip.Error())
+	}
+	buf, errReader := ioutil.ReadAll(gzipReader)
+	if errReader != nil {
+		panic("data in wrong format, ioutil.ReadAll failed:" + errReader.Error())
+	}
+	return buf
 }
 
-func _assetBase64Decode(data string)string{
-   b,_:=base64.StdEncoding.DecodeString(data)
-   return string(b)
+func _assetBase64Decode(data string) []byte {
+	bf, err := base64.StdEncoding.DecodeString(data)
+	if err != nil {
+		panic("data in wrong format, base64 decode failed:" + err.Error())
+	}
+	return bf
 }
+
+var _ AssetFiles = &assetFiles{}
 
 // Asset export assets
-var Asset = &AssetStruct{
-	Files:map[string]*AssetFile{
-	   {{range $file := .files}}
-	      _assetBase64Decode("{{$file.Name}}"):&AssetFile{
-	         Name:_assetBase64Decode("{{$file.Name}}"),
-	         Mtime:{{$file.Mtime}},
-	         Content:_assetGzipBase64decode("{{$file.Content}}"),
-	       },
-		{{end}}
-	},
+var Asset AssetFiles
+
+func init(){
+    asset:= &assetFiles{Files: map[string]*assetFile{}}
+	Asset=asset
+	{{range $file := .files}}
+    {
+     fileName:=string(_assetBase64Decode("{{$file.Name}}"))
+     contentGzBase64:="{{$file.Content}}"
+     oneFile:=&assetFile{
+		 name:fileName,
+		 mtime:time.Unix({{$file.Mtime}},0),
+		 content:_assetGzipBase64decode(contentGzBase64),
+		 contentGzip:_assetBase64Decode(contentGzBase64),
+	   }
+      asset.Files[fileName]=oneFile
+    }
+    {{end}}
 }
 
 `))

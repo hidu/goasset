@@ -18,9 +18,13 @@ type config struct {
 }
 
 func (conf *config) String() string {
-	data, _ := json.MarshalIndent(conf, "", "    ")
+	data, _ := json.Marshal(conf)
 	return string(data)
 }
+
+var resourceDir = flag.String("src", "resource/", "asset resource dir, eg : resource/")
+var destFileName = flag.String("dest", "resource/asset.go", "dest FileName, eg : resource/asset.go ")
+var packageName = flag.String("package", "resource", "package name, eg : resource")
 
 func parseConf() (*config, error) {
 	confFilePath := flag.Arg(0)
@@ -28,7 +32,7 @@ func parseConf() (*config, error) {
 		confFilePath = "asset.json"
 	}
 	_, err := os.Stat(confFilePath)
-	var conf config
+	conf := &config{}
 	if err == nil {
 		data, err := ioutil.ReadFile(confFilePath)
 		if err != nil {
@@ -39,52 +43,53 @@ func parseConf() (*config, error) {
 		if err != nil {
 			return nil, err
 		}
-	}
-	if *src != "" {
-		conf.AssetDir = *src
-	}
+	} else {
+		if *resourceDir != "" {
+			conf.AssetDir = *resourceDir
+		}
 
-	if *dest != "" {
-		conf.DestName = *dest
-	}
-	if *packageName != "" {
-		conf.PackageName = *packageName
+		if *destFileName != "" {
+			conf.DestName = *destFileName
+		}
+		if *packageName != "" {
+			conf.PackageName = *packageName
+		}
 	}
 	if conf.AssetDir == "" {
-		return nil, fmt.Errorf("asset src dir is empty")
+		return nil, fmt.Errorf("asset resource dir is empty")
 	}
 
 	if conf.DestName == "" {
-		return nil, fmt.Errorf("asset dest is empty")
+		return nil, fmt.Errorf("asset destFileName is empty")
 	}
 
 	conf.assetDirs = strings.Split(conf.AssetDir, "|")
-	for i, dir := range conf.assetDirs {
+	for idx, dir := range conf.assetDirs {
 		if info, err := os.Stat(dir); err != nil {
 			if !info.IsDir() {
 				return nil, fmt.Errorf("asset dir[%s] is not dir", dir)
 			}
-			conf.assetDirs[i], _ = filepath.Abs(dir)
+			conf.assetDirs[idx], _ = filepath.Abs(dir)
 		}
 	}
 
 	destInfo, err := os.Stat(conf.DestName)
 
 	if err == nil && destInfo.IsDir() {
-		conf.DestName = conf.DestName + string(filepath.Separator) + "asset.go"
+		conf.DestName = filepath.Join(conf.DestName, "asset.go")
 	}
 
 	if conf.PackageName == "" {
 		conf.PackageName = filepath.Base(conf.AssetDir)
 	}
 
-	return &conf, nil
+	return conf, nil
 }
 
 var demoConf = `
 {
-  "src":"res",
-  "dest":"res/assest.go",
-  "package":"res"
+  "src":"resource/",
+  "dest":"resource/asset.go",
+  "package":"resource"
 }
 `

@@ -9,9 +9,9 @@ go get -u github.com/hidu/goasset
 
 useage
 ```
- goasset  [-src=res] [-dest=demo] [-package=res] [asset.json]
+ goasset  [-src=resource] [-dest=resource/asset.go] [-package=resource] [asset.json]
 ```
-output file is `assest.go` in asset dir  
+output file is `asset.go` in asset dir  
 
 goasset conf is: `assest.json`:
 ```
