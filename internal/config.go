@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"encoding/json"
@@ -10,29 +10,31 @@ import (
 	"strings"
 )
 
-type config struct {
+// Config 配置文件结构
+type Config struct {
 	AssetDir    string `json:"src"`
 	DestName    string `json:"dest"`
 	PackageName string `json:"package"`
 	assetDirs   []string
 }
 
-func (conf *config) String() string {
+func (conf *Config) String() string {
 	data, _ := json.Marshal(conf)
 	return string(data)
 }
 
-var resourceDir = flag.String("src", "resource/", "asset resource dir, eg : resource/")
-var destFileName = flag.String("dest", "resource/asset.go", "dest FileName, eg : resource/asset.go ")
-var packageName = flag.String("package", "resource", "package name, eg : resource")
+var resourceDir = flag.String("src", "resource/", "Asset Resource Dir, eg : resource/")
+var destFileName = flag.String("dest", "resource/asset.go", "Destination FileName, eg : resource/asset.go ")
+var packageName = flag.String("package", "resource", "Package Name, eg : resource")
 
-func parseConf() (*config, error) {
+// ParseConf 解析出配置
+func ParseConf() (*Config, error) {
 	confFilePath := flag.Arg(0)
 	if confFilePath == "" {
 		confFilePath = "asset.json"
 	}
 	_, err := os.Stat(confFilePath)
-	conf := &config{}
+	conf := &Config{}
 	if err == nil {
 		data, err := ioutil.ReadFile(confFilePath)
 		if err != nil {
@@ -65,7 +67,7 @@ func parseConf() (*config, error) {
 
 	conf.assetDirs = strings.Split(conf.AssetDir, "|")
 	for idx, dir := range conf.assetDirs {
-		if info, err := os.Stat(dir); err != nil {
+		if info, err := os.Stat(dir); err == nil {
 			if !info.IsDir() {
 				return nil, fmt.Errorf("asset dir[%s] is not dir", dir)
 			}
@@ -85,11 +87,3 @@ func parseConf() (*config, error) {
 
 	return conf, nil
 }
-
-var demoConf = `
-{
-  "src":"resource/",
-  "dest":"resource/asset.go",
-  "package":"resource"
-}
-`

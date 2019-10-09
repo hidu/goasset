@@ -31,11 +31,11 @@ func main() {
 	names := res.Asset.GetFileNames("/")
 	fmt.Println("fileNames of /", names)
 
-	names_0 := res.Asset.GetFileNames("")
-	fmt.Println("fileNames of ", names_0)
+	names0 := res.Asset.GetFileNames("")
+	fmt.Println("fileNames of ", names0)
 
-	names_1 := res.Asset.GetFileNames("/res/js/")
-	fmt.Println("fileNames of /res/js/", names_1)
+	names1 := res.Asset.GetFileNames("/res/js/")
+	fmt.Println("fileNames of /res/js/", names1)
 
 	fmt.Println("pls visit http://" + addr + "/index.html")
 

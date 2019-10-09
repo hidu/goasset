@@ -1,0 +1,2 @@
+
+// asset_include( b_1.txt )
