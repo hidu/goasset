@@ -31,7 +31,7 @@ func main() {
 
 	conf, confErr := internal.ParseConf()
 	if confErr != nil {
-		log.Fatalln("parse config failed:", confErr)
+		log.Fatalln("[goasset] parse config failed:", confErr)
 	}
 	ga := &internal.GoAsset{
 		Config: conf,
@@ -40,7 +40,7 @@ func main() {
 	err := ga.Do()
 
 	if err != nil {
-		log.Fatalln("pack asset with error: ", err)
+		log.Fatalln("[goasset] pack asset with error: ", err)
 	}
-	log.Println("pack asset success")
+	log.Println("[goasset] pack asset success")
 }

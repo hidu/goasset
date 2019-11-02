@@ -1,0 +1,5 @@
+{
+  "src":"template",
+  "dest":"internal/asset.go",
+  "package":"internal"
+}

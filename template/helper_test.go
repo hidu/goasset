@@ -5,12 +5,12 @@ import (
 	"testing"
 )
 
-type helperCaseItem struct {
+type assetHelperCaseItem struct {
 	Input  string
 	Expect string
 }
 
-func (hc *helperCaseItem) CheckExpectEq(t *testing.T, result string) {
+func (hc *assetHelperCaseItem) CheckExpectEq(t *testing.T, result string) {
 	expectTrim := strings.TrimSpace(hc.Expect)
 	resultTrim := strings.TrimSpace(result)
 	if expectTrim != resultTrim {
@@ -20,7 +20,7 @@ func (hc *helperCaseItem) CheckExpectEq(t *testing.T, result string) {
 
 func TestAssetRemove(t *testing.T) {
 
-	cases := []*helperCaseItem{
+	cases := []*assetHelperCaseItem{
 		{
 			Input: `//asset_remove_start()
 package template
@@ -91,7 +91,7 @@ b`,
 
 func TestAssetInclude(t *testing.T) {
 	t.Logf("AssetInclude")
-	cases := []*helperCaseItem{
+	cases := []*assetHelperCaseItem{
 		{
 			Input:  `//asset_include(a.txt)`,
 			Expect: "hello",
@@ -120,7 +120,7 @@ func TestAssetInclude(t *testing.T) {
 
 func TestAssetRemoveAbove(t *testing.T) {
 	t.Logf("AssetRemoveAbove")
-	cases := []*helperCaseItem{
+	cases := []*assetHelperCaseItem{
 		{
 			Input: `asset
 //asset_remove_above()`,

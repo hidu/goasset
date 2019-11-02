@@ -1,6 +1,6 @@
 goasset
 ========
-go assets tool (V 1.0 20191009)
+go assets tool (V 1.0 20191102)
 
 ## 1.Install
 ```
@@ -52,6 +52,8 @@ Using it with `go generate` cmd:
     
     http.Handle("/static/",http.StripPrefix("/static/",res.Asset.HTTPHandler("/res/")))
 ```
+
+默认所有 目录名称为 *private 的不允许通过web访问。
 
 #### b: Read Content Directly
 ```

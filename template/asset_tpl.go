@@ -1,4 +1,5 @@
 package template
+
 // asset_remove_above()
 
 // asset_include(header.tpl)
@@ -6,21 +7,21 @@ package template
 import (
 	"bytes"
 	"compress/gzip"
+	"encoding/base64"
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"mime"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
-	"log"
-	"regexp"
 )
-
 
 // AssetFile one asset file
 type AssetFile interface {
@@ -88,9 +89,9 @@ func (afs *assetFiles) GetAssetFile(name string) (AssetFile, error) {
 		name = "/" + name
 	}
 	if _assetDirect {
-		assetFilePath:=filepath.Join(_assetCwd, name)
+		assetFilePath := filepath.Join(_assetCwd, name)
 		f, err := os.Open(assetFilePath)
-		log.Println("Asset Direct, name=",name,"assetPath=",assetFilePath,"err=",err)
+		log.Println("[goasset] Asset Direct, name=", name, "assetPath=", assetFilePath, "err=", err)
 
 		if err != nil {
 			return nil, err
@@ -106,10 +107,10 @@ func (afs *assetFiles) GetAssetFile(name string) (AssetFile, error) {
 				return nil, err
 			}
 
-			helper:=newAssetHelper()
-			contentNew,errHelper:=helper.Execute(assetFilePath,content,"")
-			if errHelper!=nil{
-				return nil,errHelper
+			helper := newAssetHelper()
+			contentNew, errHelper := helper.Execute(assetFilePath, content, "")
+			if errHelper != nil {
+				return nil, errHelper
 			}
 			return &assetFile{
 				content: contentNew,
@@ -158,10 +159,17 @@ func (afs *assetFiles) GetFileNames(dir string) []string {
 }
 
 // FileHandlerFunc handler http files
+// 若目录名称 为 *private 则不允许通过web访问
 func (afs *assetFiles) FileHandlerFunc(name string) http.HandlerFunc {
-	if strings.Contains(name, "private") {
+	if strings.Contains(name, "private/") {
 		return http.NotFound
 	}
+	return afs.FileHandlerFuncAll(name)
+}
+
+// FileHandlerFuncAll handler http files
+// 无 private 目录规则
+func (afs *assetFiles) FileHandlerFuncAll(name string) http.HandlerFunc {
 	name = filepath.ToSlash(name)
 	file, err := afs.GetAssetFile(name)
 	return func(writer http.ResponseWriter, req *http.Request) {
@@ -187,9 +195,9 @@ func (afs *assetFiles) FileHandlerFunc(name string) http.HandlerFunc {
 		}
 		writer.Header().Set("Last-Modified", file.ModTime().UTC().Format(http.TimeFormat))
 
-		gzipContent:=file.ContentGzip()
+		gzipContent := file.ContentGzip()
 
-		if len(gzipContent)>0 && strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") {
+		if len(gzipContent) > 0 && strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") {
 			writer.Header().Set("Content-Encoding", "gzip")
 			writer.Write(gzipContent)
 		} else {
@@ -219,19 +227,6 @@ func (f *_assetFileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f.sf.FileHandlerFunc(name).ServeHTTP(w, r)
 }
 
-func _assetGzipDecode(data []byte) []byte {
-	gzipReader, errGzip := gzip.NewReader(bytes.NewBuffer(data))
-	if errGzip != nil {
-		panic("data in wrong format, gzip decode failed:" + errGzip.Error())
-	}
-	buf, errReader := ioutil.ReadAll(gzipReader)
-	if errReader != nil {
-		panic("data in wrong format, ioutil.ReadAll failed:" + errReader.Error())
-	}
-	return buf
-}
-
-
 var _ AssetFiles = &assetFiles{}
 
 //---------------------------helper.go--------begin--------------------------//
@@ -239,7 +234,11 @@ var _ AssetFiles = &assetFiles{}
 // regexp 包在当前文件并未使用，为了使当前模板import的包更整齐，故在此提前引入
 func fixImportForHelper() {
 	_ = regexp.Compile
+	_ = gzip.ErrChecksum
+	_ = base64.StdEncoding
+	_ = bytes.TrimSpace
 }
+
 // asset_remove_end()
 
 // asset_include(helper.go)

@@ -32,10 +32,12 @@ type assetHelper struct {
 	Regs map[string]*regexp.Regexp
 }
 
+// RegisterFn 注册helper方法
 func (h *assetHelper) RegisterFn(name string, fn assetHelperFn) {
 	h.Fns = append(h.Fns, map[string]assetHelperFn{name: fn})
 }
 
+// Execute 执行所有的helper方法
 func (h *assetHelper) Execute(fileAbsPath string, content []byte, skipFnName string) (contentNew []byte, err error) {
 	contentNew = make([]byte, len(content))
 	copy(contentNew, content)
