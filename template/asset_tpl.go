@@ -72,14 +72,6 @@ type assetFiles struct {
 
 var _assetDirect bool
 
-func init() {
-	exeName := filepath.Base(os.Getenv("_"))
-	// only enable with go run
-	if exeName == "go" || (runtime.GOOS == "windows" && strings.Contains(os.Args[0], "go-build")) {
-		flag.BoolVar(&_assetDirect, "asset_direct", false, "for debug,read asset direct")
-	}
-}
-
 var _assetCwd, _ = os.Getwd()
 
 // GetAssetFile get file by name
@@ -228,6 +220,9 @@ func (f *_assetFileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 var _ AssetFiles = &assetFiles{}
+
+var _ = flag.String
+var _ = runtime.Version()
 
 //---------------------------helper.go--------begin--------------------------//
 // asset_remove_start()

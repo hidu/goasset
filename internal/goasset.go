@@ -112,6 +112,7 @@ func (ga *GoAsset) generate() error {
 	infos["version"] = VERSION
 	infos["files"] = ga.Files
 	infos["package"] = ga.Config.PackageName
+	infos["debug"] = ga.Config.Debug
 
 	ga.Tpl.Execute(&buf, infos)
 

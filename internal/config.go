@@ -15,6 +15,7 @@ type Config struct {
 	AssetDir    string `json:"src"`
 	DestName    string `json:"dest"`
 	PackageName string `json:"package"`
+	Debug       string `json:"debug"`
 	assetDirs   []string
 }
 
@@ -26,6 +27,7 @@ func (conf *Config) String() string {
 var resourceDir = flag.String("src", "resource/", "Asset Resource Dir, eg : resource/")
 var destFileName = flag.String("dest", "resource/asset.go", "Destination FileName, eg : resource/asset.go ")
 var packageName = flag.String("package", "resource", "Package Name, eg : resource")
+var debug = flag.String("debug", "", "enable debug?")
 
 // ParseConf 解析出配置
 func ParseConf() (*Config, error) {
@@ -56,6 +58,10 @@ func ParseConf() (*Config, error) {
 		if *packageName != "" {
 			conf.PackageName = *packageName
 		}
+	}
+
+	if *debug != "" {
+		conf.Debug = *debug
 	}
 	if conf.AssetDir == "" {
 		return nil, fmt.Errorf("asset resource dir is empty")

@@ -1,6 +1,6 @@
 goasset
 ========
-go assets tool (V 1.0 20191102)
+go assets tool (V 1.0 20191123)
 
 ## 1.Install
 ```
@@ -11,7 +11,7 @@ go get -u github.com/hidu/goasset
 
 ### 2.1 Cmd
 ```
- goasset  [-src=resource] [-dest=resource/asset.go] [-package=resource] [asset.json]
+ goasset  [-src=resource] [-dest=resource/asset.go] [-package=resource] [-debug=xxx] [asset.json]
 ```
 > note:  
 > assets(eg: .css、.js、image files) in resource dir will packed into go source file:`resource/asset.go`
@@ -21,7 +21,13 @@ Using it with `go generate` cmd:
 //go:generate goasset -src template -package internal -dest internal/asset.go
 ```
 
-### 2.2 Config File(`assest.json`)
+
+
+> debug:
+>> 1: goasset -debug=abc asset.json
+>> 2: go run youapp/main.go -goasset_debug_abc
+
+### 2.2 Config File(`asset.json`)
 #### a. only one dir: 
 ```
 {

@@ -1,6 +1,14 @@
 
 func init(){
 
+	{{if ne .debug ""}}
+	    exeName := filepath.Base(os.Getenv("_"))
+        // only enable with go run
+        if exeName == "go" || (runtime.GOOS == "windows" && strings.Contains(os.Args[0], "go-build")) {
+            flag.BoolVar(&_assetDirect, "goasset_debug_{{.debug}}", false, "for debug,read asset direct")
+        }
+	{{end}}
+
     // asset_include(footer_fn.go)
 
 	asset:= &assetFiles{Files: map[string]*assetFile{}}
