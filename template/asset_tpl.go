@@ -224,7 +224,7 @@ var _ AssetFiles = &assetFiles{}
 var _ = flag.String
 var _ = runtime.Version()
 
-//---------------------------helper.go--------begin--------------------------//
+// ---------------------------helper.go--------begin--------------------------//
 // asset_remove_start()
 // regexp 包在当前文件并未使用，为了使当前模板import的包更整齐，故在此提前引入
 func fixImportForHelper() {
@@ -237,7 +237,7 @@ func fixImportForHelper() {
 // asset_remove_end()
 
 // asset_include(helper.go)
-//---------------------------helper.go--------finish-------------------------//
+// ---------------------------helper.go--------finish-------------------------//
 
 // Asset export assets
 var Asset AssetFiles

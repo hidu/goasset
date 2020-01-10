@@ -223,7 +223,7 @@ var _ AssetFiles = &assetFiles{}
 var _ = flag.String
 var _ = runtime.Version()
 
-//---------------------------helper.go--------begin--------------------------//
+// ---------------------------helper.go--------begin--------------------------//
 
 func newAssetHelper() *assetHelper {
 	helper := &assetHelper{}
@@ -344,7 +344,7 @@ func (h *assetHelper) Include(fileAPath string, content []byte) (contentNew []by
 	return h.include(fileAPath, content, includeFiles)
 }
 
-//---------------------------helper.go--------finish-------------------------//
+// ---------------------------helper.go--------finish-------------------------//
 
 // Asset export assets
 var Asset AssetFiles

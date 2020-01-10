@@ -223,7 +223,7 @@ var _ AssetFiles = &assetFiles{}
 var _ = flag.String
 var _ = runtime.Version()
 
-//---------------------------helper.go--------begin--------------------------//
+// ---------------------------helper.go--------begin--------------------------//
 
 func newAssetHelper() *assetHelper {
 	helper := &assetHelper{}
@@ -344,7 +344,7 @@ func (h *assetHelper) Include(fileAPath string, content []byte) (contentNew []by
 	return h.include(fileAPath, content, includeFiles)
 }
 
-//---------------------------helper.go--------finish-------------------------//
+// ---------------------------helper.go--------finish-------------------------//
 
 // Asset export assets
 var Asset AssetFiles
@@ -377,7 +377,7 @@ func init() {
 	Asset = asset
 
 	{
-		// 0 mtime: 2019-11-23 21:23:43 , size: 5682
+		// 0 mtime: 2020-01-10 18:36:22 , size: 5684
 		fileName := "/template/asset_tpl.go"
 		contentBase64 := `
 H4sIAAAAAAAA/7Rab28bR3N/zfsU64Ot584+H+2i6As+YB9Ilv8VsWxISvpCUuUjb4/c5Hh3vl1alGkCLuDENmKnAdrEiBugaZs0QYK4BpIWjos0X0aU5W9R
@@ -400,32 +400,32 @@ vUB41eVmsmxKRRYW0KplnvCXaJTm1FFq12pSLwXWcf1lGju2CoJn13czifQYundo0hHdGZRrYIB3Ai4K
 3TUSsc68eDaAQhU0wpCK5c5uRpd2Lw4ETaC2LmPbxYHAH74sq1y9WZqBsU9Tta3YzyvWqSj1e1jIqtWgitdZVh1N/UqNpQ6DkDsMWpf8NTlnpoIi+Ew68WK7
 TTNx9qLqEtiuR2xsHbhzmKJYVSyyJja1AgosRWjMaYW1pDM1c9wi9MvAZhRL1YiWy8cdaGinkSYyifNdLmiPME4a9Zzy+vu8HvjvcxIkoV4Bk+ac7rioKObY
 OGl7OeU+hiX/ihCZLtggjcpy6P8hdabE948SiHBcd1aEnrecNGrxhe2CwRrNb9N8yKMGhGKPZCHLG0TxwU3AQnNygVFu8ogQE5FVy8oDktpFXARAy29KnYic
-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
+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
 AAA=`
 
 		contentGz := _assetBase64Decode(contentBase64, fileName)
 		oneFile := &assetFile{
 			name:        fileName,
-			mtime:       time.Unix(1574515423, 0),
+			mtime:       time.Unix(1578652582, 0),
 			content:     _assetGzipDecode(contentGz, fileName),
 			contentGzip: contentGz,
 		}

@@ -1,6 +1,6 @@
 package main
 
-// go:generate go run main.go -src template -package internal -dest internal/asset.go
+//go:generate go run main.go -src template -package internal -dest internal/asset.go
 
 // ignore_go:generate goasset -src template -package internal -dest internal/asset.go
 
