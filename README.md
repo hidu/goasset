@@ -1,6 +1,6 @@
 goasset
 ========
-go assets tool (V 1.0 20191123)
+go assets tool (V 1.0 20200330)
 
 ## 1.Install
 ```
