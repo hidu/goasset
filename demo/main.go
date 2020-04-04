@@ -5,6 +5,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/hidu/goasset/demo/res"
@@ -39,5 +40,6 @@ func main() {
 
 	fmt.Println("pls visit http://" + addr + "/index.html")
 
-	http.ListenAndServe(addr, nil)
+	err := http.ListenAndServe(addr, nil)
+	log.Println("demo exists:", err)
 }

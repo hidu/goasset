@@ -188,12 +188,16 @@ func (afs *assetFiles) FileHandlerFuncAll(name string) http.HandlerFunc {
 		writer.Header().Set("Last-Modified", file.ModTime().UTC().Format(http.TimeFormat))
 
 		gzipContent := file.ContentGzip()
-
+		var errWrote error
 		if len(gzipContent) > 0 && strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") {
 			writer.Header().Set("Content-Encoding", "gzip")
-			writer.Write(gzipContent)
+			_, errWrote = writer.Write(gzipContent)
 		} else {
-			writer.Write(file.Content())
+			_, errWrote = writer.Write(file.Content())
+		}
+
+		if errWrote != nil {
+			log.Printf("[wf] wrote %q with error:%s\n", name, errWrote)
 		}
 	}
 }
@@ -227,6 +231,7 @@ var _ = runtime.Version()
 // ---------------------------helper.go--------begin--------------------------//
 // asset_remove_start()
 // regexp 包在当前文件并未使用，为了使当前模板import的包更整齐，故在此提前引入
+// nolint
 func fixImportForHelper() {
 	_ = regexp.Compile
 	_ = gzip.ErrChecksum

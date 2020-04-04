@@ -15,9 +15,9 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/tdewolff/minify"
-	"github.com/tdewolff/minify/css"
-	"github.com/tdewolff/minify/js"
+	"github.com/tdewolff/minify/v2"
+	"github.com/tdewolff/minify/v2/css"
+	"github.com/tdewolff/minify/v2/js"
 )
 
 type staticFile struct {
@@ -114,11 +114,13 @@ func (ga *GoAsset) generate() error {
 	infos["package"] = ga.Config.PackageName
 	infos["debug"] = ga.Config.Debug
 
-	ga.Tpl.Execute(&buf, infos)
+	if err := ga.Tpl.Execute(&buf, infos); err != nil {
+		return err
+	}
 
 	codeBytes, err := format.Source(buf.Bytes())
 	if err != nil {
-		log.Println("[goasset] source code:\n", buf.String())
+		log.Printf("[goasset] format source code with error : %s\nsource:%s\n", err, buf.String())
 		return err
 	}
 
@@ -161,10 +163,15 @@ func (ga *GoAsset) walkerFor(baseDir string) filepath.WalkFunc {
 			nameSlash := string(filepath.Separator) + filepath.ToSlash(filepath.Base(baseDir)+string(filepath.Separator)+nameRel)
 			nameSlash = strings.Replace(nameSlash, string(filepath.Separator), "/", -1)
 
+			gzData, errGz := gzEncode(contentMin)
+			if errGz != nil {
+				return fmt.Errorf("gzip %s with error:%w", absName, errGz)
+			}
+
 			ga.Files = append(ga.Files, staticFile{
 				Name:       nameSlash,
 				NameOrigin: nameSlash,
-				Content:    gzEncode(contentMin),
+				Content:    gzData,
 				Mtime:      info.ModTime().Unix(),
 				Size:       info.Size(),
 			})
@@ -195,13 +202,17 @@ func (ga *GoAsset) dataMinify(name string, data []byte) []byte {
 	return d
 }
 
-func gzEncode(data []byte) []byte {
+func gzEncode(data []byte) ([]byte, error) {
 	var buf bytes.Buffer
 	gw := gzip.NewWriter(&buf)
-	gw.Write(data)
-	gw.Flush()
+	if _, err := gw.Write(data); err != nil {
+		return nil, err
+	}
+	if err := gw.Flush(); err != nil {
+		return nil, err
+	}
 	gw.Close()
-	return buf.Bytes()
+	return buf.Bytes(), nil
 }
 
 func isIgnoreFile(name string) bool {

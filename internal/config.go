@@ -42,9 +42,10 @@ func ParseConf() (*Config, error) {
 		if err != nil {
 			return nil, err
 		}
-		os.Chdir(filepath.Dir(confFilePath))
-		err = json.Unmarshal(data, &conf)
-		if err != nil {
+		if err = os.Chdir(filepath.Dir(confFilePath)); err != nil {
+			return nil, err
+		}
+		if err = json.Unmarshal(data, &conf); err != nil {
 			return nil, err
 		}
 	} else {

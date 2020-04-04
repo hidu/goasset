@@ -1,6 +1,6 @@
 goasset
 ========
-go assets tool (V 1.0 20200330)
+go assets tool (V 1.0 20200404)
 
 ## 1.Install
 ```
@@ -25,7 +25,7 @@ Using it with `go generate` cmd:
 
 > debug:
 >> 1: goasset -debug=abc asset.json
->> 2: go run youapp/main.go -goasset_debug_abc
+>> 2: go run yourapp/main.go -goasset_debug_abc
 
 ### 2.2 Config File(`asset.json`)
 #### a. only one dir: 
