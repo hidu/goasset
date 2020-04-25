@@ -33,11 +33,12 @@ type HelperFunc func(fileName string, content []byte) ([]byte, error)
 
 // GoAsset go asset tool
 type GoAsset struct {
-	Config *Config
-	Minify *minify.M
-	Files  []staticFile
-	Tpl    *template.Template
-	Helper *assetHelper
+	Config  *Config
+	Minify  *minify.M
+	Files   []staticFile
+	Tpl     *template.Template
+	TestTpl *template.Template
+	Helper  *assetHelper
 }
 
 func (ga *GoAsset) init() {
@@ -50,7 +51,14 @@ func (ga *GoAsset) init() {
 	ga.Helper = newAssetHelper()
 
 	tplTxt := Asset.GetContent("template/asset_tpl.go")
-	ga.Tpl = template.Must(template.New("static").Funcs(template.FuncMap{
+	ga.Tpl = template.Must(template.New("asset.go").Funcs(ga.tplFuncs()).Parse(string(tplTxt)))
+
+	tplTestTxt := Asset.GetContent("template/asset_test.tpl")
+	ga.TestTpl = template.Must(template.New("asset_test.go").Funcs(ga.tplFuncs()).Parse(string(tplTestTxt)))
+}
+
+func (ga *GoAsset) tplFuncs() template.FuncMap {
+	return template.FuncMap{
 		"long_txt_fmt": func(txt []byte) string {
 			encStr := base64.StdEncoding.EncodeToString(txt)
 			reader := bytes.NewReader([]byte(encStr))
@@ -65,7 +73,7 @@ func (ga *GoAsset) init() {
 		"ts2str": func(ts int64) string {
 			return time.Unix(ts, 0).Format("2006-01-02 15:04:05")
 		},
-	}).Parse(string(tplTxt)))
+	}
 }
 
 // Do main func
@@ -106,15 +114,33 @@ func (ga *GoAsset) scan() error {
 }
 
 func (ga *GoAsset) generate() error {
-	var buf bytes.Buffer
-
 	infos := make(map[string]interface{})
 	infos["version"] = VERSION
 	infos["files"] = ga.Files
 	infos["package"] = ga.Config.PackageName
 	infos["debug"] = ga.Config.Debug
 
-	if err := ga.Tpl.Execute(&buf, infos); err != nil {
+	// var names []string
+	// for _, f := range ga.Files {
+	// 	names=append(names,f.Name)
+	// }
+	//
+	// infos["fileNames"] = names
+	if err := ga.renderAndWrite(ga.Tpl, infos, ga.Config.DestName); err != nil {
+		return err
+	}
+
+	testFileName := ga.Config.DestName[:len(ga.Config.DestName)-3] + "_test.go"
+	if err := ga.renderAndWrite(ga.TestTpl, infos, testFileName); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ga *GoAsset) renderAndWrite(tpl *template.Template, infos interface{}, outFilePath string) error {
+	var buf bytes.Buffer
+	if err := tpl.Execute(&buf, infos); err != nil {
 		return err
 	}
 
@@ -124,15 +150,12 @@ func (ga *GoAsset) generate() error {
 		return err
 	}
 
-	outFilePath := ga.Config.DestName
-
 	origin, err := ioutil.ReadFile(outFilePath)
 	if err == nil && bytes.Equal(origin, codeBytes) {
 		log.Println("[goasset]", outFilePath, "unchanged")
 		return nil
 	}
-	err = ioutil.WriteFile(outFilePath, codeBytes, 0644)
-	return err
+	return ioutil.WriteFile(outFilePath, codeBytes, 0644)
 }
 
 func (ga *GoAsset) walkerFor(baseDir string) filepath.WalkFunc {

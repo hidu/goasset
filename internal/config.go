@@ -26,7 +26,7 @@ func (conf *Config) String() string {
 
 var resourceDir = flag.String("src", "resource/", "Asset Resource Dir, eg : resource/")
 var destFileName = flag.String("dest", "resource/asset.go", "Destination FileName, eg : resource/asset.go ")
-var packageName = flag.String("package", "resource", "Package Name, eg : resource")
+var packageName = flag.String("package", "resource", "Package Txt, eg : resource")
 var debug = flag.String("debug", "", "enable debug?")
 
 // ParseConf 解析出配置
